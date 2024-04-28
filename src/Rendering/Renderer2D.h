@@ -2,6 +2,17 @@
 #include "../GraphicalObject.h"
 
 #pragma once
+
+enum class RootSignatureEntry
+{
+	WorldTransform,
+	ConstantBuffer,
+	Texture,
+	Size
+};
+
+
+
 class Renderer2D : public DeviceResources
 {
 public:

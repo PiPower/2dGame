@@ -76,7 +76,7 @@ void Renderer2D::StopRecording()
 
 void Renderer2D::RenderGraphicalObject(GraphicalObject& obj)
 {
-
+	CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::ConstantBuffer, obj.getConstantBufferVirtualAddress());
 	CommandList->IASetVertexBuffers(0, 1, obj.getVertexBufferView());
 	CommandList->IASetIndexBuffer(obj.getIndexBufferView());
 	CommandList->DrawIndexedInstanced(INDEX_COUNT, 1, 0, 0, 0);
@@ -110,9 +110,9 @@ void Renderer2D::CreateRootSignature()
 	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
 	CD3DX12_ROOT_PARAMETER1 rootSlots[3];
-	rootSlots[0].InitAsConstantBufferView(0);
-	rootSlots[1].InitAsConstantBufferView(1);
-	rootSlots[2].InitAsDescriptorTable(1, &texTable);
+	rootSlots[(int)RootSignatureEntry::WorldTransform ].InitAsConstantBufferView(0);
+	rootSlots[(int)RootSignatureEntry::ConstantBuffer].InitAsConstantBufferView(1);
+	rootSlots[(int)RootSignatureEntry::Texture].InitAsDescriptorTable(1, &texTable);
 
 	CD3DX12_STATIC_SAMPLER_DESC pointWrap(
 		0, // shaderRegister

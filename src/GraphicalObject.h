@@ -9,15 +9,16 @@
 class GraphicalObject
 {
 public:
-	GraphicalObject(DeviceResources* device, DirectX::XMFLOAT2 center, DirectX::XMFLOAT2 scale = { 1,1 },
-				DirectX::XMFLOAT2 offset = { 0,0 }, DirectX::XMFLOAT2 rotation = { 0,0 });
+	GraphicalObject(DeviceResources* device, DirectX::XMFLOAT2 origin, 
+						DirectX::XMFLOAT2 scale = { 1,1 }, float rotation = 0);
 	void initDrawingResources(DeviceResources* device);
+	D3D12_GPU_VIRTUAL_ADDRESS getConstantBufferVirtualAddress();
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW* getIndexBufferView();
 
 private:
+	UINT* constantBufferMap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> constantBuffer;
-	DirectX::XMFLOAT4X4 transformationMatrix;
 
 	static Microsoft::WRL::ComPtr<ID3D12Resource> vertexBuffer;
 	static Microsoft::WRL::ComPtr<ID3D12Resource> indexBuffer;

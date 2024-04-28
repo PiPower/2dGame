@@ -22,18 +22,14 @@ cbuffer WorldTransform : register(b0)
 
 cbuffer ObjectBuffer : register(b1)
 {
-    float2 chunkOffset;
+    float4x4 constantBuffer;
 };
 
 
 Vout VS(Vin vin)
 {    
     Vout vout;
-    vout.Pos = float4(0, 0, 0, 1);
-    
-    vout.Pos.x = vin.pos.x;
-    vout.Pos.y = vin.pos.y;
-    
+    vout.Pos = mul(float4(vin.pos, 0, 1), constantBuffer);
     vout.texCoord = vin.texCoord;
     return vout;
 }

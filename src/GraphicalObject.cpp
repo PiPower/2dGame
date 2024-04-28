@@ -11,12 +11,25 @@ D3D12_INDEX_BUFFER_VIEW GraphicalObject::indexBufferView = {};
 
 
 
-GraphicalObject::GraphicalObject(DeviceResources* device, DirectX::XMFLOAT2 center, DirectX::XMFLOAT2 scale, DirectX::XMFLOAT2 offset, DirectX::XMFLOAT2 rotation)
+GraphicalObject::GraphicalObject(DeviceResources* device, DirectX::XMFLOAT2 origin, DirectX::XMFLOAT2 scale, float rotation)
 {
 	if (vertexBuffer.Get() == nullptr)
 	{
 		initDrawingResources(device);
 	}
+	XMVECTOR scalling = XMLoadFloat2(&scale);
+	XMVECTOR rotationOrigin = XMVectorZero();
+	XMVECTOR translation = XMLoadFloat2(&origin);
+
+	XMMATRIX transformation = XMMatrixAffineTransformation2D(scalling, rotationOrigin, 0, translation);
+	transformation = XMMatrixTranspose(transformation);
+	XMFLOAT4X4 transformationMatrix;
+	XMStoreFloat4x4(&transformationMatrix, transformation);
+	device->CreateUploadBuffer(&constantBuffer, 256);
+
+	D3D12_RANGE range{ 0,0 };
+	constantBuffer->Map(0, &range, (void**)&constantBufferMap);
+	memcpy(constantBufferMap, &transformationMatrix, sizeof(XMFLOAT4X4));
 }
 
 void GraphicalObject::initDrawingResources(DeviceResources* device)
@@ -45,6 +58,11 @@ void GraphicalObject::initDrawingResources(DeviceResources* device)
 	indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
 	indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 	indexBufferView.SizeInBytes = sizeof(unsigned int) * 6;
+}
+
+D3D12_GPU_VIRTUAL_ADDRESS GraphicalObject::getConstantBufferVirtualAddress()
+{
+	return constantBuffer->GetGPUVirtualAddress();
 }
 
 D3D12_VERTEX_BUFFER_VIEW* GraphicalObject::getVertexBufferView()
