@@ -17,7 +17,7 @@ struct Vout
 
 cbuffer WorldTransform : register(b0)
 {
-    float4x4 CameraTransform;
+    float4x4 ProjectionTransform;
 };
 
 cbuffer ObjectBuffer : register(b1)
@@ -30,6 +30,7 @@ Vout VS(Vin vin)
 {    
     Vout vout;
     vout.Pos = mul(float4(vin.pos, 0, 1), constantBuffer);
+    vout.Pos = mul(vout.Pos, ProjectionTransform);
     vout.texCoord = vin.texCoord;
     return vout;
 }
