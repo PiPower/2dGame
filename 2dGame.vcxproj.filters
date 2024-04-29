@@ -30,7 +30,7 @@
     <ClCompile Include="src\Rendering\Renderer2D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\GraphicalObject.cpp">
+    <ClCompile Include="src\Entity.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,7 +47,7 @@
     <ClInclude Include="src\Rendering\Renderer2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\GraphicalObject.h">
+    <ClInclude Include="src\Entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

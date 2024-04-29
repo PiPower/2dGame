@@ -135,7 +135,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\GraphicalObject.cpp" />
+    <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\Rendering\Renderer2D.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
@@ -178,7 +178,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\GraphicalObject.h" />
+    <ClInclude Include="src\Entity.h" />
     <ClInclude Include="src\Rendering\Renderer2D.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>

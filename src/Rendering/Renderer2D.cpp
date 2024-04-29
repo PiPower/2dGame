@@ -74,7 +74,7 @@ void Renderer2D::StopRecording()
 	Synchronize();
 }
 
-void Renderer2D::RenderGraphicalObject(GraphicalObject& obj)
+void Renderer2D::RenderGraphicalObject(Entity& obj)
 {
 	CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::ConstantBuffer, obj.getConstantBufferVirtualAddress());
 	CommandList->IASetVertexBuffers(0, 1, obj.getVertexBufferView());

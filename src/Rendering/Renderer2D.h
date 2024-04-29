@@ -1,5 +1,5 @@
 #include "DeviceResources.h"
-#include "../GraphicalObject.h"
+#include "../Entity.h"
 
 #pragma once
 
@@ -19,7 +19,7 @@ public:
 	Renderer2D(HWND hwnd);
 	void StartRecording();
 	void StopRecording();
-	void RenderGraphicalObject(GraphicalObject& obj);
+	void RenderGraphicalObject(Entity& obj);
 	static void Resize(HWND hwnd, void* renderer);
 protected:
 	void CompileShaders();

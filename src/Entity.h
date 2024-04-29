@@ -6,17 +6,22 @@
 #define INDEX_COUNT 6
 
 
-class GraphicalObject
+class Entity
 {
 public:
-	GraphicalObject(DeviceResources* device, DirectX::XMFLOAT2 origin, 
+	Entity(DeviceResources* device, DirectX::XMFLOAT2 origin,
 						DirectX::XMFLOAT2 scale = { 1,1 }, float rotation = 0);
 	void initDrawingResources(DeviceResources* device);
+	void UpdatePosition(DirectX::XMFLOAT2 dPos, DirectX::XMFLOAT2 dScale, float dRotation);
 	D3D12_GPU_VIRTUAL_ADDRESS getConstantBufferVirtualAddress();
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW* getIndexBufferView();
 
 private:
+	DirectX::XMFLOAT2 translation;
+	DirectX::XMFLOAT2 scale;
+	float rotation = 0;
+
 	UINT* constantBufferMap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> constantBuffer;
 
