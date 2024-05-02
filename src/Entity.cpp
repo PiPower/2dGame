@@ -17,7 +17,7 @@ Entity::Entity(DeviceResources* device, DirectX::XMFLOAT2 origin, DirectX::XMFLO
 {
 	if (vertexBuffer.Get() == nullptr)
 	{
-		initDrawingResources(device);
+		InitDrawingResources(device);
 	}
 	XMVECTOR scallingVec = XMLoadFloat2(&scale);
 	XMVECTOR rotationOriginVec = XMVectorZero();
@@ -34,7 +34,7 @@ Entity::Entity(DeviceResources* device, DirectX::XMFLOAT2 origin, DirectX::XMFLO
 	memcpy(constantBufferMap, &transformationMatrix, sizeof(XMFLOAT4X4));
 }
 
-void Entity::initDrawingResources(DeviceResources* device)
+void Entity::InitDrawingResources(DeviceResources* device)
 {
 	//2 float for pos, 2 floats for tex coord
 	XMFLOAT4 vertecies[4] = { {-1, 1, 0, 0}, {1, 1, 1, 0}, {1, -1, 1, 1}, {-1,-1, 0, 1} };
@@ -96,4 +96,51 @@ D3D12_VERTEX_BUFFER_VIEW* Entity::getVertexBufferView()
 D3D12_INDEX_BUFFER_VIEW* Entity::getIndexBufferView()
 {
 	return &indexBufferView;
+}
+
+bool Entity::IsColliding(Entity& entity)
+{
+
+	float px_1 = translation.x - scale.x ;
+	float px_2 = translation.x + scale.x ;
+
+	float ex_1 = entity.translation.x - entity.scale.x ;
+
+	if (px_1 > ex_1)
+	{
+		swap(px_1, ex_1);
+		px_2 = entity.translation.x + entity.scale.x;
+	}
+
+	float py_1 = translation.y - scale.y;
+	float py_2 = translation.y + scale.y;
+
+	float ey_1 = entity.translation.y - entity.scale.y ;
+
+
+	if (py_1 > ey_1)
+	{
+		swap(py_1, ey_1);
+		py_2 = entity.translation.y + entity.scale.y;
+	}
+
+	if (  ex_1 < px_2 && ey_1 < py_2 )
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void Entity::UpdateColor(bool isColliding)
+{
+	if (isColliding)
+	{
+		float col[] = { 0.3,0.5, 0.6, 1 };
+		memcpy((char*)constantBufferMap + sizeof(XMFLOAT4X4), col, sizeof(float) * 4);
+	}
+	else {
+		float col[] = { 1, 1, 1, 1 };
+		memcpy((char*)constantBufferMap + sizeof(XMFLOAT4X4), col, sizeof(float) * 4);
+	}
 }

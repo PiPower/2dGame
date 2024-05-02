@@ -84,6 +84,19 @@ void Renderer2D::RenderGraphicalObject(Entity& obj)
 	CommandList->DrawIndexedInstanced(INDEX_COUNT, 1, 0, 0, 0);
 }
 
+void Renderer2D::RenderGraphicalObjects(Entity* arrayObj, int num)
+{
+	for (int i = 0; i < num; i++)
+	{
+		Entity& obj = arrayObj[i];
+
+		CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::ConstantBuffer, obj.getConstantBufferVirtualAddress());
+		CommandList->IASetVertexBuffers(0, 1, obj.getVertexBufferView());
+		CommandList->IASetIndexBuffer(obj.getIndexBufferView());
+		CommandList->DrawIndexedInstanced(INDEX_COUNT, 1, 0, 0, 0);
+	}
+}
+
 void Renderer2D::Resize(HWND hwnd, void* renderer)
 {
 	Renderer2D* renderer2D = (Renderer2D*)renderer;

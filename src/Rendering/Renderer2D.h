@@ -20,6 +20,7 @@ public:
 	void StartRecording();
 	void StopRecording();
 	void RenderGraphicalObject(Entity& obj);
+	void RenderGraphicalObjects(Entity* arrayObj, int num);
 	static void Resize(HWND hwnd, void* renderer);
 protected:
 	void CompileShaders();

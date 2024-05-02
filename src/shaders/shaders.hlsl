@@ -23,6 +23,7 @@ cbuffer WorldTransform : register(b0)
 cbuffer ObjectBuffer : register(b1)
 {
     float4x4 constantBuffer;
+    float4 color;
 };
 
 
@@ -38,5 +39,5 @@ Vout VS(Vin vin)
 
 float4 PS(Vout vin) : SV_Target
 {
-    return float4(1, 1, 1, 1);
+    return color;
 }

@@ -11,11 +11,13 @@ class Entity
 public:
 	Entity(DeviceResources* device, DirectX::XMFLOAT2 origin,
 						DirectX::XMFLOAT2 scale = { 1,1 }, float rotation = 0);
-	void initDrawingResources(DeviceResources* device);
+	void InitDrawingResources(DeviceResources* device);
 	void UpdatePosition(DirectX::XMFLOAT2 dPos, DirectX::XMFLOAT2 dScale, float dRotation);
 	D3D12_GPU_VIRTUAL_ADDRESS getConstantBufferVirtualAddress();
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW* getIndexBufferView();
+	bool IsColliding(Entity& entity);
+	void UpdateColor(bool isColliding);
 
 private:
 	DirectX::XMFLOAT2 translation;
