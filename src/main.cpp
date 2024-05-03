@@ -25,10 +25,6 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		{ &renderer, {0.06, 0.9}, {0.05, 0.3}}
 	};
 
-	bool collisionTable[] = {
-		false, false, false, false, false
-	};
-
 	TimePoint old = high_resolution_clock::now();
 
 	window.RegisterResizezable(&renderer, Renderer2D::Resize);
@@ -43,16 +39,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		for (int i = 1; i < _countof(arrayOfObjs); i++)
 		{
 			bool coll = arrayOfObjs[0].IsColliding(arrayOfObjs[i]);
-			collisionTable[0] |= coll;
-			collisionTable[i] |= coll;
+			if (coll)
+			{
+				arrayOfObjs[0].ResolveCollision(arrayOfObjs[i]);
+			}
 		}
-
-		for (int i = 0; i < _countof(arrayOfObjs); i++)
-		{
-			arrayOfObjs[i].UpdateColor(collisionTable[i]);
-			collisionTable[i] = false;
-		}
-
+		arrayOfObjs[0].UpdatePosition();
+		
 	}
 }
 
@@ -77,7 +70,7 @@ void processUserInput(Window* window, Entity& obj, float dt)
 	if (window->IsKeyPressed('C')) scale_y -= dsy * dt;
 	if (window->IsKeyPressed('V')) scale_y += dsy * dt;
 
-	obj.UpdatePosition({ x*dt, y*dt }, { scale_x*dt, scale_y*dt }, rot*dt);
+	obj.UpdateDisplacementVectors({ x*dt, y*dt }, { scale_x*dt, scale_y*dt }, rot*dt);
 }
 
 
