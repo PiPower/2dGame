@@ -1,5 +1,6 @@
 #include "Entity.h"
 #include <math.h>
+#include <cmath>
 using namespace DirectX;
 
 
@@ -112,42 +113,57 @@ D3D12_INDEX_BUFFER_VIEW* Entity::getIndexBufferView()
 	return &indexBufferView;
 }
 
-bool Entity::IsColliding(Entity& entity)
+CollisionDescriptor Entity::IsColliding(Entity& entity)
 {
 
-	if (dPos.y < 0)
+	if (dPos.x == 0 && dPos.y == 0)
 	{
-		int x = 2;
-	}
-	float px_1 = translation.x + dPos.x - scale.x ;
-	float px_2 = translation.x + dPos.x + scale.x ;
-
-	float ex_1 = entity.translation.x + entity.dPos.x - entity.scale.x ;
-
-	if (px_1 > ex_1)
-	{
-		swap(px_1, ex_1);
-		px_2 = entity.translation.x + entity.dPos.x + entity.scale.x;
+		return { false };
 	}
 
-	float py_1 = translation.y+ dPos.y - scale.y;
-	float py_2 = translation.y+ dPos.y + scale.y;
+	float expanded_x = entity.scale.x + scale.x;
+	float tx_1 = ((entity.translation.x - expanded_x) - translation.x) / dPos.x;
+	float tx_2 = ((entity.translation.x + expanded_x) - translation.x) / dPos.x;
 
-	float ey_1 = entity.translation.y + entity.dPos.y - entity.scale.y ;
-
-
-	if (py_1 > ey_1)
+	if (tx_1 > tx_2)
 	{
-		swap(py_1, ey_1);
-		py_2 = entity.translation.y + entity.dPos.y + entity.scale.y;
+		swap(tx_1, tx_2);
 	}
 
-	if (  ex_1 < px_2 && ey_1 < py_2 )
+	float expanded_y = entity.scale.y + scale.y;
+	float ty_1 = ((entity.translation.y - expanded_y) - translation.y) / dPos.y;
+	float ty_2 = ((entity.translation.y + expanded_y) - translation.y) / dPos.y;
+
+	if (ty_1 > ty_2)
 	{
-		return true;
+		swap(ty_1, ty_2);
 	}
 
-	return false;
+
+	float t_hit_near = max(tx_1, ty_1);
+
+	if (t_hit_near < 0 || t_hit_near > 1.0f) return { false };
+
+
+	if (isnan(ty_2) || isnan(tx_2)) return { false };
+	if (isnan(ty_1) || isnan(tx_1)) return { false };
+
+	if (tx_1 > ty_2 || ty_1 > tx_2) return { false };
+	if(min(tx_2, ty_2) < 0 ) return { false };
+
+	XMFLOAT2 contact_normal;
+	if (tx_1 >= ty_1)
+		if (1.0f / dPos.x < 0)
+			contact_normal = { 1, 0 };
+		else
+			contact_normal = { -1, 0 };
+	else if (tx_1 < ty_1)
+		if (1.0f / dPos.y < 0)
+			contact_normal = { 0, 1 };
+		else
+			contact_normal = { 0, -1 };
+
+	return { true, t_hit_near, contact_normal, &entity };
 }
 
 void Entity::UpdateColor(bool isColliding)
@@ -169,45 +185,11 @@ float euclideanDistance(XMFLOAT2&& l, XMFLOAT2& r)
 	return  sqrtf( powf(l.x - r.x,2) + powf(l.y - r.y, 2));
 }
 
-void Entity::ResolveCollision(Entity& staticEntity)
+void Entity::ResolveCollision(CollisionDescriptor& desc)
 {
 
-	if (dPos.x == 0 && dPos.y == 0)
-	{
-		return;
-	}
-	float expanded_x = staticEntity.scale.x + scale.x;
-	float tx_1 = ((staticEntity.translation.x - expanded_x) - translation.x) / dPos.x;
-	float tx_2 = ((staticEntity.translation.x + expanded_x) - translation.x) / dPos.x;
-
-	if (tx_1 > tx_2)
-	{
-		swap(tx_1, tx_2);
-	}
-
-	float expanded_y = staticEntity.scale.y + scale.y;
-	float ty_1 = ((staticEntity.translation.y - expanded_y) - translation.y) / dPos.y;
-	float ty_2 = ((staticEntity.translation.y + expanded_y) - translation.y) / dPos.y;
-
-	if (ty_1 > ty_2)
-	{
-		swap(ty_1, ty_2);
-	}
-	
-	float t_hit_near = max(tx_1, ty_1);
-
-	XMFLOAT2 contact_normal;
-	if (tx_1 > ty_1)
-		if (1.0f/dPos.x < 0)
-			contact_normal = { 1, 0 };
-		else
-			contact_normal = { -1, 0 };
-	else if (tx_1 < ty_1)
-		if (1.0f / dPos.y < 0)
-			contact_normal = { 0, 1 };
-		else
-			contact_normal = { 0, -1 };
-
+	XMFLOAT2& contact_normal = desc.surfaceNormal;
+	float& t_hit_near = desc.t_hit;
 	dPos = { dPos.x + contact_normal.x * abs(dPos.x) * (1 - t_hit_near) ,dPos.y + contact_normal.y * abs(dPos.y) * (1 - t_hit_near)};
 
 }

@@ -5,6 +5,16 @@
 #include <wrl.h>
 #define INDEX_COUNT 6
 
+class Entity;
+
+struct CollisionDescriptor
+{
+	bool collisionOccured;
+	float t_hit;
+	XMFLOAT2 surfaceNormal;
+	Entity* collider;
+};
+
 
 class Entity
 {
@@ -17,9 +27,9 @@ public:
 	D3D12_GPU_VIRTUAL_ADDRESS getConstantBufferVirtualAddress();
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW* getIndexBufferView();
-	bool IsColliding(Entity& entity);
+	CollisionDescriptor IsColliding(Entity& entity);
 	void UpdateColor(bool isColliding);
-	void ResolveCollision(Entity& staticEntity);
+	void ResolveCollision(CollisionDescriptor& desc);
 
 private:
 	DirectX::XMFLOAT2 translation;
