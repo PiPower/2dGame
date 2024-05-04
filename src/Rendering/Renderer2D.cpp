@@ -7,8 +7,6 @@ Renderer2D::Renderer2D(HWND hwnd)
 	DeviceResources(hwnd)
 {
 	ComPtr<ID3D12Resource> uploadBuffer;
-	CreateWorldTransform();
-	UpdateWorldTransform();
 
 	NOT_SUCCEEDED(CommandAllocator->Reset());
 	NOT_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), nullptr));
@@ -48,7 +46,7 @@ void Renderer2D::StartRecording()
 	CommandList->OMSetRenderTargets(1, &rtv_handle, true, &depth_hanlde);
 	CommandList->SetGraphicsRootSignature(rootSignature.Get());
 	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::WorldTransform, worldTransform->GetGPUVirtualAddress());
+	CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::WorldTransform, worldTransform);
 	//CommandList->SetDescriptorHeaps(1, textureHeap.GetAddressOf());
 	//CommandList->SetGraphicsRootDescriptorTable(2, textureHeap->GetGPUDescriptorHandleForHeapStart());
 }
@@ -76,6 +74,11 @@ void Renderer2D::StopRecording()
 	Synchronize();
 }
 
+void Renderer2D::BindCameraBuffer(D3D12_GPU_VIRTUAL_ADDRESS worldTransformAddres)
+{
+	worldTransform = worldTransformAddres;
+}
+
 void Renderer2D::RenderGraphicalObject(Entity& obj)
 {
 	CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::ConstantBuffer, obj.getConstantBufferVirtualAddress());
@@ -101,7 +104,6 @@ void Renderer2D::Resize(HWND hwnd, void* renderer)
 {
 	Renderer2D* renderer2D = (Renderer2D*)renderer;
 	renderer2D->DeviceResources::Resize(hwnd);
-	renderer2D->UpdateWorldTransform();
 }
 
 void Renderer2D::CompileShaders()
@@ -182,13 +184,7 @@ void Renderer2D::CreateLocalPipeline()
 	NOT_SUCCEEDED(Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&graphicsPipeline)));
 }
 
-void Renderer2D::CreateWorldTransform()
-{
-	CreateUploadBuffer(&worldTransform, 256);
-	D3D12_RANGE readRange{ 0,0 };
-	worldTransform->Map(0, &readRange, (void**)&wtMap);
-}
-
+/*
 void Renderer2D::UpdateWorldTransform()
 {
 
@@ -204,4 +200,4 @@ void Renderer2D::UpdateWorldTransform()
 		ptr[i] = ((float*)&transformationMatrix)[i];
 	}
 }
-
+*/

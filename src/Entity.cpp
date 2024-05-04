@@ -166,18 +166,22 @@ CollisionDescriptor Entity::IsColliding(Entity& entity)
 	return { true, t_hit_near, contact_normal, &entity };
 }
 
-void Entity::UpdateColor(bool isColliding)
+PhysicalDescriptor Entity::getEntityDescriptor()
 {
-	if (isColliding)
-	{
-		float col[] = { 0.3,0.5, 0.6, 1 };
-		memcpy((char*)constantBufferMap + sizeof(XMFLOAT4X4), col, sizeof(float) * 4);
-	}
-	else {
-		float col[] = { 1, 1, 1, 1 };
-		memcpy((char*)constantBufferMap + sizeof(XMFLOAT4X4), col, sizeof(float) * 4);
-	}
+	PhysicalDescriptor out;
+	out.center = translation;
+	out.width = scale.x * 2;
+	out.height = scale.y * 2;
+	out.dPos = dPos;
+	return out;
 }
+
+void Entity::UpdateColor(XMFLOAT4 color)
+{
+	memcpy((char*)constantBufferMap + sizeof(XMFLOAT4X4), &color, sizeof(float) * 4);
+}
+
+
 
 
 float euclideanDistance(XMFLOAT2&& l, XMFLOAT2& r)

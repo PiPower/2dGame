@@ -19,6 +19,7 @@ public:
 	Renderer2D(HWND hwnd);
 	void StartRecording();
 	void StopRecording();
+	void BindCameraBuffer(D3D12_GPU_VIRTUAL_ADDRESS worldTransformAddres);
 	void RenderGraphicalObject(Entity& obj);
 	void RenderGraphicalObjects(Entity* arrayObj, int num);
 	static void Resize(HWND hwnd, void* renderer);
@@ -26,8 +27,6 @@ protected:
 	void CompileShaders();
 	void CreateRootSignature();
 	void CreateLocalPipeline();
-	void CreateWorldTransform();
-	void UpdateWorldTransform();
 	//void CreateTexture(ID3D12Resource** uploadBuffer);
 private:
 	UINT* wtMap;
@@ -35,7 +34,7 @@ private:
 	ComPtr<ID3D12RootSignature> rootSignature;
 	ComPtr<ID3DBlob> vs_shaderBlob;
 	ComPtr<ID3DBlob> ps_shaderBlob;
-	ComPtr<ID3D12Resource> worldTransform;
+	D3D12_GPU_VIRTUAL_ADDRESS worldTransform;
 	ComPtr<ID3D12Resource> test_vb;
 	ComPtr<ID3D12Resource> texture;
 	ComPtr<ID3D12DescriptorHeap> textureHeap;

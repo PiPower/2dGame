@@ -16,6 +16,14 @@ struct CollisionDescriptor
 };
 
 
+struct PhysicalDescriptor
+{
+	XMFLOAT2 center;
+	float width;
+	float height;
+	XMFLOAT2 dPos;
+};
+
 class Entity
 {
 public:
@@ -28,7 +36,8 @@ public:
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW* getIndexBufferView();
 	CollisionDescriptor IsColliding(Entity& entity);
-	void UpdateColor(bool isColliding);
+	PhysicalDescriptor getEntityDescriptor();
+	void UpdateColor(XMFLOAT4 color);
 	void ResolveCollision(CollisionDescriptor& desc);
 
 private:
