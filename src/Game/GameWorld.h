@@ -3,6 +3,7 @@
 #include "../Rendering/DeviceResources.h"
 #include "Camera.h"
 #include "Bullet.h"
+#include "Enemy.h"
 
 struct RenderableResources
 {
@@ -23,11 +24,17 @@ public:
 	Camera* getCamera();
 	RenderableResources* getRenderableResources();
 private:
+	void spawnEnemy(DeviceResources* device);
 	void processUserInput(Window* window, DeviceResources* device, float dt);
 	void testCollisions(float dt);
 	void playerWallCollision(Entity* entity, Entity** collidableTable, int collidableCount);
 	void bulletWallCollision(Bullet* bullet, Entity** collidableTable, int collidableCount);
+	void bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, int collidableCount, 
+											vector<int>& bulletCleanPos, vector<int>& enemyCleanPos);
 	void cleanBullet(int i);
+	void cleanEnemy(int i);
+	void RegisterResource(Entity* entity);
+	void UnregisterResource(Entity* entity);
 private:
 	float cooldown;
 	Entity* player;
@@ -36,7 +43,9 @@ private:
 	vector<Entity*> worldConstructions;
 	vector<float> bulletLifetime;
 	vector<Bullet*> bullets;
+	vector<Enemy*> enemies;
 	RenderableResources renderableResources;
+	float totalGameTime;
 	TimePoint old;
 };
 

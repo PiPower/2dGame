@@ -8,6 +8,7 @@ public:
 	void UpdateCamera(Entity& entity, float dt);
 	void ZoomUpdate(float dScale, float low_cap = 0.4, float high_cap = 2);
 	XMFLOAT2 getCameraCenter();
+	XMFLOAT2 TransformCoordsToWorldCoords(XMFLOAT2 deviceCoords);
 	D3D12_GPU_VIRTUAL_ADDRESS getWorldTransformAddress();
 private:
 	void UpdateBuffer();

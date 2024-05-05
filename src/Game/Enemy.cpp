@@ -5,3 +5,9 @@ Enemy::Enemy(float hp, DeviceResources* device, DirectX::XMFLOAT2 origin, Direct
 	Entity(device, origin, scale, 0), hp(hp)
 {
 }
+
+bool Enemy::DealDamage(float dmg)
+{
+	hp -= dmg;
+	return hp <= 0;
+}

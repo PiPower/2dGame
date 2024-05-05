@@ -65,7 +65,7 @@ DeviceResources::DeviceResources(HWND hwnd,int frame_count)
         exit(0);
     }
 
-    NOT_SUCCEEDED(D3D12CreateDevice(gpuAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&Device)))
+    NOT_SUCCEEDED(D3D12CreateDevice(gpuAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&Device)))
 
     D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
     msQualityLevels.Format = backBufferFormat;

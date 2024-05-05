@@ -92,6 +92,11 @@ XMFLOAT2 Camera::getCameraCenter()
 	return cameraCenter;
 }
 
+XMFLOAT2 Camera::TransformCoordsToWorldCoords(XMFLOAT2 deviceCoords)
+{
+	return{ deviceCoords.x/ (invAspectRatio * scalling.x) + cameraCenter.x,   deviceCoords.y / (scalling.y) + cameraCenter.y };
+}
+
 D3D12_GPU_VIRTUAL_ADDRESS Camera::getWorldTransformAddress()
 {
 	return CBuffer->GetGPUVirtualAddress();

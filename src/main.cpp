@@ -14,13 +14,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 {
 
 #if defined(_DEBUG)
-	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
 	Window window(1600, 900, L"test", L"Voxel world");
 	Renderer2D renderer(window.GetWindowHWND());
 	window.RegisterResizezable(&renderer, Renderer2D::Resize);
-	GameWorld game(&renderer, { 2,2 });
+	GameWorld game(&renderer, { 5,5 });
 	renderer.BindCameraBuffer(game.getCamera()->getWorldTransformAddress());
 
 
