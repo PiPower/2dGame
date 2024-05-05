@@ -166,7 +166,7 @@ void GameWorld::playerWallCollision(Entity* entity, Entity** collidableTable, in
 
 }
 
-void GameWorld::bulletWallCollision(Entity* bullet, Entity** collidableTable, int collidableCount)
+void GameWorld::bulletWallCollision(Bullet* bullet, Entity** collidableTable, int collidableCount)
 {
 	vector < pair<float, Entity*> > collisions;
 	for (int i = 0; i < collidableCount; i++)

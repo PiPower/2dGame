@@ -14,7 +14,7 @@ D3D12_INDEX_BUFFER_VIEW Entity::indexBufferView = {};
 
 Entity::Entity(DeviceResources* device, DirectX::XMFLOAT2 origin, DirectX::XMFLOAT2 scale, float rotation)
 	:
-	translation(origin), scale(scale), rotation(rotation), dPos(0,0), dScale(0,0), dRotation(0)
+	translation(origin), scale(scale), rotation(rotation), velocity(0,0), dScale(0,0), dRotation(0)
 {
 	if (vertexBuffer.Get() == nullptr)
 	{
@@ -63,10 +63,10 @@ void Entity::InitDrawingResources(DeviceResources* device)
 	indexBufferView.SizeInBytes = sizeof(unsigned int) * 6;
 }
 
-void Entity::UpdateDisplacementVectors(DirectX::XMFLOAT2 dPos, DirectX::XMFLOAT2 dScale, float dRotation)
+void Entity::UpdateDisplacementVectors(DirectX::XMFLOAT2 velocity, DirectX::XMFLOAT2 dScale, float dRotation)
 {
-	this->dPos.x += dPos.x;
-	this->dPos.y += dPos.y;
+	this->velocity.x += velocity.x;
+	this->velocity.y += velocity.y;
 
 	this->dScale.x += dScale.x;
 	this->dScale.y += dScale.y;
@@ -76,15 +76,15 @@ void Entity::UpdateDisplacementVectors(DirectX::XMFLOAT2 dPos, DirectX::XMFLOAT2
 
 void Entity::UpdatePosition(bool keepVelocity)
 {
-	translation.x += dPos.x;
-	translation.y += dPos.y;
+	translation.x += velocity.x;
+	translation.y += velocity.y;
 	scale.x += dScale.x;
 	scale.y += dScale.y;
 	rotation += dRotation;
 
 	if (!keepVelocity)
 	{
-		dPos = { 0, 0 };
+		velocity = { 0, 0 };
 	}
 	dScale = { 0,0 };
 	dRotation = 0;
@@ -119,14 +119,14 @@ D3D12_INDEX_BUFFER_VIEW* Entity::getIndexBufferView()
 CollisionDescriptor Entity::IsColliding(Entity& entity)
 {
 
-	if (dPos.x == 0 && dPos.y == 0)
+	if (velocity.x == 0 && velocity.y == 0)
 	{
 		return { false };
 	}
 
 	float expanded_x = entity.scale.x + scale.x;
-	float tx_1 = ((entity.translation.x - expanded_x) - translation.x) / dPos.x;
-	float tx_2 = ((entity.translation.x + expanded_x) - translation.x) / dPos.x;
+	float tx_1 = ((entity.translation.x - expanded_x) - translation.x) / velocity.x;
+	float tx_2 = ((entity.translation.x + expanded_x) - translation.x) / velocity.x;
 
 	if (tx_1 > tx_2)
 	{
@@ -134,8 +134,8 @@ CollisionDescriptor Entity::IsColliding(Entity& entity)
 	}
 
 	float expanded_y = entity.scale.y + scale.y;
-	float ty_1 = ((entity.translation.y - expanded_y) - translation.y) / dPos.y;
-	float ty_2 = ((entity.translation.y + expanded_y) - translation.y) / dPos.y;
+	float ty_1 = ((entity.translation.y - expanded_y) - translation.y) / velocity.y;
+	float ty_2 = ((entity.translation.y + expanded_y) - translation.y) / velocity.y;
 
 	if (ty_1 > ty_2)
 	{
@@ -156,12 +156,12 @@ CollisionDescriptor Entity::IsColliding(Entity& entity)
 
 	XMFLOAT2 contact_normal;
 	if (tx_1 >= ty_1)
-		if (1.0f / dPos.x < 0)
+		if (1.0f / velocity.x < 0)
 			contact_normal = { 1, 0 };
 		else
 			contact_normal = { -1, 0 };
 	else if (tx_1 < ty_1)
-		if (1.0f / dPos.y < 0)
+		if (1.0f / velocity.y < 0)
 			contact_normal = { 0, 1 };
 		else
 			contact_normal = { 0, -1 };
@@ -175,7 +175,7 @@ PhysicalDescriptor Entity::getEntityDescriptor()
 	out.center = translation;
 	out.width = scale.x * 2;
 	out.height = scale.y * 2;
-	out.dPos = dPos;
+	out.velocity = velocity;
 	return out;
 }
 
@@ -194,6 +194,6 @@ void Entity::ResolveCollision(CollisionDescriptor& desc)
 
 	XMFLOAT2& contact_normal = desc.surfaceNormal;
 	float& t_hit_near = desc.t_hit;
-	dPos = { dPos.x + contact_normal.x * abs(dPos.x) * (1 - t_hit_near) ,dPos.y + contact_normal.y * abs(dPos.y) * (1 - t_hit_near)};
+	velocity = { velocity.x + contact_normal.x * abs(velocity.x) * (1 - t_hit_near) ,velocity.y + contact_normal.y * abs(velocity.y) * (1 - t_hit_near)};
 
 }

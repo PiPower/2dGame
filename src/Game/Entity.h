@@ -21,7 +21,7 @@ struct PhysicalDescriptor
 	XMFLOAT2 center;
 	float width;
 	float height;
-	XMFLOAT2 dPos;
+	XMFLOAT2 velocity;
 };
 
 class Entity
@@ -40,11 +40,11 @@ public:
 	void UpdateColor(XMFLOAT4 color);
 	void ResolveCollision(CollisionDescriptor& desc);
 
-private:
+protected:
 	DirectX::XMFLOAT2 translation;
 	DirectX::XMFLOAT2 scale;
 
-	DirectX::XMFLOAT2 dPos;
+	DirectX::XMFLOAT2 velocity;
 	DirectX::XMFLOAT2 dScale;
 	float dRotation;
 	float rotation = 0;

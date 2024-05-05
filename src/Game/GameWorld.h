@@ -26,7 +26,7 @@ private:
 	void processUserInput(Window* window, DeviceResources* device, float dt);
 	void testCollisions();
 	void playerWallCollision(Entity* entity, Entity** collidableTable, int collidableCount);
-	void bulletWallCollision(Entity* bullet, Entity** collidableTable, int collidableCount);
+	void bulletWallCollision(Bullet* bullet, Entity** collidableTable, int collidableCount);
 private:
 	Entity* player;
 	Camera* camera;
