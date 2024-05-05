@@ -11,13 +11,19 @@ public:
 	Camera* getCamera();
 	vector<Entity>* getWorldEntities();
 private:
-	void processUserInput(Window* window, float dt);
+	void processUserInput(Window* window, DeviceResources* device, float dt);
 	void testCollisions();
+	void perObjectCollision(unsigned int index);
+
 private:
 	int playerIndex = 0;
+
+
 	Camera* camera;
 	XMFLOAT2 worldBounds;
 	vector<Entity> worldEntities;
+	vector<unsigned int> bulletIndexes;
+	vector<unsigned int> collidable;
 	TimePoint old;
 };
 

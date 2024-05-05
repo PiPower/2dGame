@@ -31,7 +31,7 @@ public:
 						DirectX::XMFLOAT2 scale = { 1,1 }, float rotation = 0);
 	void InitDrawingResources(DeviceResources* device);
 	void UpdateDisplacementVectors(DirectX::XMFLOAT2 dPos, DirectX::XMFLOAT2 dScale, float dRotation);
-	void UpdatePosition();
+	void UpdatePosition(bool keepVelocity = false);
 	D3D12_GPU_VIRTUAL_ADDRESS getConstantBufferVirtualAddress();
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW* getIndexBufferView();

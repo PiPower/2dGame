@@ -74,7 +74,7 @@ void Entity::UpdateDisplacementVectors(DirectX::XMFLOAT2 dPos, DirectX::XMFLOAT2
 	this->dRotation += dRotation;
 }
 
-void Entity::UpdatePosition()
+void Entity::UpdatePosition(bool keepVelocity)
 {
 	translation.x += dPos.x;
 	translation.y += dPos.y;
@@ -82,7 +82,10 @@ void Entity::UpdatePosition()
 	scale.y += dScale.y;
 	rotation += dRotation;
 
-	dPos = { 0, 0 };
+	if (!keepVelocity)
+	{
+		dPos = { 0, 0 };
+	}
 	dScale = { 0,0 };
 	dRotation = 0;
 
@@ -180,9 +183,6 @@ void Entity::UpdateColor(XMFLOAT4 color)
 {
 	memcpy((char*)constantBufferMap + sizeof(XMFLOAT4X4), &color, sizeof(float) * 4);
 }
-
-
-
 
 float euclideanDistance(XMFLOAT2&& l, XMFLOAT2& r)
 {
