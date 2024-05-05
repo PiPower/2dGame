@@ -183,21 +183,3 @@ void Renderer2D::CreateLocalPipeline()
 	psoDesc.DSVFormat = DsvFormat;
 	NOT_SUCCEEDED(Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&graphicsPipeline)));
 }
-
-/*
-void Renderer2D::UpdateWorldTransform()
-{
-
-	XMMATRIX transformation = XMMatrixScaling(1/AspectRatio(), 1, 1);
-	transformation = XMMatrixTranspose(transformation);
-	XMFLOAT4X4 transformationMatrix;
-	XMStoreFloat4x4(&transformationMatrix, transformation);
-	//memcpy(wtMap, &transformationMatrix, sizeof(XMFLOAT4X4));
-
-	float* ptr = (float*)wtMap;
-	for (int i = 0; i < 16; i++)
-	{
-		ptr[i] = ((float*)&transformationMatrix)[i];
-	}
-}
-*/

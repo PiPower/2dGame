@@ -4,6 +4,7 @@ Camera::Camera(DeviceResources* device, XMFLOAT2 transitionCoords)
 	:
 	cameraCenter(0,0), scalling(1,1), invAspectRatio(1.0f/device->AspectRatio()), transitionCoords(transitionCoords)
 {
+	this->transitionCoords.y *= 1.0f/device->AspectRatio();
 
 	int size = ceil(sizeof(XMFLOAT4X4) * 2.0 / 256) * 256;
 
@@ -20,10 +21,10 @@ void Camera::UpdateCamera(Entity& entity, float dt)
 	XMFLOAT2 offset = { 0,0 };
 	constexpr float stopRange = 0.4;
 	constexpr float displacementPercent = 0.1;
-		
-	if ((entityDescriptor.center.x > cameraCenter.x  &&  entityDescriptor.center.x  < cameraCenter.x + stopRange * transitionCoords.x)
+	XMFLOAT2 screenBox = { transitionCoords.x * (1 / scalling.x), transitionCoords.y * (1 / scalling.y) };
+	if ((entityDescriptor.center.x > cameraCenter.x  &&  entityDescriptor.center.x  < cameraCenter.x + stopRange * screenBox.x)
 		||
-		(entityDescriptor.center.x  < cameraCenter.x && entityDescriptor.center.x > cameraCenter.x - stopRange * transitionCoords.x)
+		(entityDescriptor.center.x  < cameraCenter.x && entityDescriptor.center.x > cameraCenter.x - stopRange * screenBox.x)
 		)
 	{
 		centerRight = false;
@@ -31,21 +32,21 @@ void Camera::UpdateCamera(Entity& entity, float dt)
 	}
 
 
-	if (entityDescriptor.center.x > cameraCenter.x + transitionCoords.x || centerRight)
+	if (entityDescriptor.center.x > cameraCenter.x + screenBox.x || centerRight)
 	{
 		centerRight = true;
-		offset.x += abs(entityDescriptor.center.x - cameraCenter.x + stopRange * transitionCoords.x) * dt * 2;
+		offset.x += abs(entityDescriptor.center.x - cameraCenter.x + stopRange * screenBox.x) * dt * 2;
 	}
-	else if (entityDescriptor.center.x < cameraCenter.x - transitionCoords.x || centerLeft)
+	else if (entityDescriptor.center.x < cameraCenter.x - screenBox.x || centerLeft)
 	{
 		centerLeft = true;
-		offset.x -= abs(entityDescriptor.center.x - cameraCenter.x - stopRange * transitionCoords.x) * dt * 2;
+		offset.x -= abs(entityDescriptor.center.x - cameraCenter.x - stopRange * screenBox.x) * dt * 2;
 	}
 
 
-	if ((entityDescriptor.center.y > cameraCenter.y && entityDescriptor.center.y < cameraCenter.y + stopRange * transitionCoords.y)
+	if ((entityDescriptor.center.y > cameraCenter.y && entityDescriptor.center.y < cameraCenter.y + stopRange * screenBox.y)
 		||
-		(entityDescriptor.center.y  < cameraCenter.y && entityDescriptor.center.y > cameraCenter.y - stopRange * transitionCoords.y)
+		(entityDescriptor.center.y  < cameraCenter.y && entityDescriptor.center.y > cameraCenter.y - stopRange * screenBox.y)
 		)
 	{
 		centerTop = false;
@@ -53,19 +54,16 @@ void Camera::UpdateCamera(Entity& entity, float dt)
 	}
 
 
-	if (entityDescriptor.center.y > cameraCenter.y + transitionCoords.y || centerTop)
+	if (entityDescriptor.center.y > cameraCenter.y + screenBox.y || centerTop)
 	{
 		centerTop = true;
-		offset.y += abs(entityDescriptor.center.y - cameraCenter.y + stopRange * transitionCoords.y) * dt * 2;
+		offset.y += abs(entityDescriptor.center.y - cameraCenter.y + stopRange * screenBox.y) * dt * 2;
 	}
-	else if (entityDescriptor.center.y < cameraCenter.y - transitionCoords.y || centerBottom)
+	else if (entityDescriptor.center.y < cameraCenter.y - screenBox.y || centerBottom)
 	{
 		centerBottom = true;
-		offset.y -= abs(entityDescriptor.center.y - cameraCenter.y - stopRange * transitionCoords.y) * dt * 2;
+		offset.y -= abs(entityDescriptor.center.y - cameraCenter.y - stopRange * screenBox.y) * dt * 2;
 	}
-
-
-
 
 	if (offset.x != 0 || offset.y != 0)
 	{
@@ -87,6 +85,11 @@ void Camera::ZoomUpdate(float dScale, float low_cap, float high_cap)
 
 		UpdateBuffer();
 	}
+}
+
+XMFLOAT2 Camera::getCameraCenter()
+{
+	return cameraCenter;
 }
 
 D3D12_GPU_VIRTUAL_ADDRESS Camera::getWorldTransformAddress()
