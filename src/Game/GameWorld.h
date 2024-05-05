@@ -24,14 +24,17 @@ public:
 	RenderableResources* getRenderableResources();
 private:
 	void processUserInput(Window* window, DeviceResources* device, float dt);
-	void testCollisions();
+	void testCollisions(float dt);
 	void playerWallCollision(Entity* entity, Entity** collidableTable, int collidableCount);
 	void bulletWallCollision(Bullet* bullet, Entity** collidableTable, int collidableCount);
+	void cleanBullet(int i);
 private:
+	float cooldown;
 	Entity* player;
 	Camera* camera;
 	XMFLOAT2 worldBounds;
 	vector<Entity*> worldConstructions;
+	vector<float> bulletLifetime;
 	vector<Bullet*> bullets;
 	RenderableResources renderableResources;
 	TimePoint old;

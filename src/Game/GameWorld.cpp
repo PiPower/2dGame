@@ -1,13 +1,16 @@
 #include "GameWorld.h"
 #include <random>
+#include <algorithm>
 #include "Bullet.h"
+#define COOLDOWN 0.1f
+#define BULLET_LIFETIME 10.0f
 
 using namespace std;
 using namespace std::chrono;
 
 GameWorld::GameWorld(DeviceResources* device, XMFLOAT2 worldBounds)
 	:
-	worldBounds(worldBounds)
+	worldBounds(worldBounds), cooldown(0)
 {
 
 	camera = new Camera(device);
@@ -58,7 +61,7 @@ void GameWorld::GameLoop(Window* window, DeviceResources* device)
 	old = high_resolution_clock::now();
 
 	processUserInput(window, device, frameTime.count());
-	testCollisions();
+	testCollisions(frameTime.count());
 	camera->UpdateCamera(*player, frameTime.count());
 
 }
@@ -89,13 +92,9 @@ void GameWorld::processUserInput(Window* window, DeviceResources* device, float 
 	if (window->IsKeyPressed('Q')) zoom -= dz * dt;
 	if (window->IsKeyPressed('E')) zoom += dz * dt;
 
-	while (!window->IsMouseEventEmpty())
+	cooldown -= dt;
+	if (window->IsLeftPressed() && cooldown <= 0)
 	{
-		Window::MouseEvent mouseEvent = window->ReadMouseEvent();
-		if (mouseEvent.Type != Window::MouseEvent::Event::LeftPress)
-		{
-			continue;
-		}
 
 		XMFLOAT2 camCenter = camera->getCameraCenter();
 		XMFLOAT2 playerCenter = player->getEntityDescriptor().center;
@@ -116,23 +115,39 @@ void GameWorld::processUserInput(Window* window, DeviceResources* device, float 
 		renderableResources.vbViewTable.push_back(bullet->getVertexBufferView());
 		renderableResources.ibViewTable.push_back(bullet->getIndexBufferView());
 		renderableResources.size++;
+		bulletLifetime.push_back(BULLET_LIFETIME);
+		cooldown = COOLDOWN;
 	}
-
 
 	player->UpdateDisplacementVectors({x * dt, y * dt}, {0, 0}, 0);
 	camera->ZoomUpdate(zoom, 0.7f, 1.5f);
 
 }
 
-void GameWorld::testCollisions()
+void GameWorld::testCollisions(float dt)
 {
 	playerWallCollision(player, worldConstructions.data(), worldConstructions.size());
 	player->UpdatePosition();
-	
+	vector<int> cleanupPos;
+
 	for (int i = 0; i < bullets.size(); i++)
 	{
+		bulletLifetime[i] -= dt;
+		if (bulletLifetime[i] <= 0)
+		{
+			cleanBullet(i);
+			cleanupPos.push_back(i);
+			continue;
+		}
+
 		bulletWallCollision(bullets[i], worldConstructions.data(), worldConstructions.size());
 		bullets[i]->UpdatePosition(true);
+	}
+
+	for (int i = 0; i < cleanupPos.size(); i++)
+	{
+		bullets.erase(bullets.begin() + cleanupPos[i] - i);
+		bulletLifetime.erase(bulletLifetime.begin() + cleanupPos[i] - i);
 	}
 	
 }
@@ -189,6 +204,24 @@ void GameWorld::bulletWallCollision(Bullet* bullet, Entity** collidableTable, in
 	for (pair<float, Entity*>& collision : collisions)
 	{
 		CollisionDescriptor coll = bullet->IsColliding(*collision.second);
-		bullet->ResolveCollision(coll);
+		if (coll.collisionOccured)
+		{
+			bullet->ResolveCollision(coll);
+		}
+
 	}
+}
+
+void GameWorld::cleanBullet(int i)
+{
+	auto bulletIterator = find(renderableResources.resourceOwner.begin(), renderableResources.resourceOwner.end(), bullets[i]);
+	int index = distance(renderableResources.resourceOwner.begin(), bulletIterator);
+
+	renderableResources.resourceOwner.erase(renderableResources.resourceOwner.begin() + index);
+	renderableResources.constBufferTable.erase(renderableResources.constBufferTable.begin() + index);
+	renderableResources.ibViewTable.erase(renderableResources.ibViewTable.begin() + index);
+	renderableResources.vbViewTable.erase(renderableResources.vbViewTable.begin() + index);
+	renderableResources.size--;
+	Bullet* bullet = bullets[i];
+	delete bullet;
 }
