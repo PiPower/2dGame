@@ -79,24 +79,16 @@ void Renderer2D::BindCameraBuffer(D3D12_GPU_VIRTUAL_ADDRESS worldTransformAddres
 	worldTransform = worldTransformAddres;
 }
 
-void Renderer2D::RenderGraphicalObject(Entity& obj)
-{
-	CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::ConstantBuffer, obj.getConstantBufferVirtualAddress());
-	CommandList->IASetVertexBuffers(0, 1, obj.getVertexBufferView());
-	CommandList->IASetIndexBuffer(obj.getIndexBufferView());
-	CommandList->DrawIndexedInstanced(INDEX_COUNT, 1, 0, 0, 0);
-}
 
-void Renderer2D::RenderGraphicalObjects(Entity* arrayObj, int num)
+void Renderer2D::RenderGraphicalObjects(D3D12_GPU_VIRTUAL_ADDRESS* constBufferTable,
+									D3D12_VERTEX_BUFFER_VIEW** vbViewTable, D3D12_INDEX_BUFFER_VIEW** ibViewTable, int num, UINT indexCount)
 {
 	for (int i = 0; i < num; i++)
 	{
-		Entity& obj = arrayObj[i];
-
-		CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::ConstantBuffer, obj.getConstantBufferVirtualAddress());
-		CommandList->IASetVertexBuffers(0, 1, obj.getVertexBufferView());
-		CommandList->IASetIndexBuffer(obj.getIndexBufferView());
-		CommandList->DrawIndexedInstanced(INDEX_COUNT, 1, 0, 0, 0);
+		CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::ConstantBuffer, constBufferTable[i] );
+		CommandList->IASetVertexBuffers(0, 1, vbViewTable[i]);
+		CommandList->IASetIndexBuffer(ibViewTable[i]);
+		CommandList->DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
 	}
 }
 

@@ -1,5 +1,4 @@
 #include "DeviceResources.h"
-#include "../Entity.h"
 
 #pragma once
 
@@ -20,8 +19,9 @@ public:
 	void StartRecording();
 	void StopRecording();
 	void BindCameraBuffer(D3D12_GPU_VIRTUAL_ADDRESS worldTransformAddres);
-	void RenderGraphicalObject(Entity& obj);
-	void RenderGraphicalObjects(Entity* arrayObj, int num);
+	void RenderGraphicalObjects(D3D12_GPU_VIRTUAL_ADDRESS* constBufferTable, 
+						D3D12_VERTEX_BUFFER_VIEW** vbViewTable, D3D12_INDEX_BUFFER_VIEW** ibViewTable, int num, UINT indexCount);
+
 	static void Resize(HWND hwnd, void* renderer);
 protected:
 	void CompileShaders();

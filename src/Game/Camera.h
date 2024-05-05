@@ -1,5 +1,5 @@
 #pragma once
-#include "Rendering/DeviceResources.h"
+#include "../Rendering/DeviceResources.h"
 #include "Entity.h"
 class Camera
 {

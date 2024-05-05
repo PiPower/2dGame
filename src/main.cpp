@@ -1,6 +1,11 @@
-#include "utils.h"
-#include "GameWorld.h"
-#include <random>
+#include "Rendering/window.h"
+#include "Rendering/Renderer2D.h"
+#include <chrono>
+#include "Game/Entity.h"
+#include "Game/Camera.h"
+#include "Game/GameWorld.h"
+
+
 using namespace std;
 using namespace std::chrono;
 
@@ -20,11 +25,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 
 	TimePoint old = high_resolution_clock::now();
-	
+	RenderableResources* resources = game.getRenderableResources();
+
 	while (window.ProcessMessages() == 0)
 	{
 		renderer.StartRecording();
-		renderer.RenderGraphicalObjects(game.getWorldEntities()->data(), game.getWorldEntities()->size());
+		renderer.RenderGraphicalObjects(resources->constBufferTable.data(), 
+			resources->vbViewTable.data(), resources->ibViewTable.data(), resources->size, INDEX_COUNT);
 		renderer.StopRecording();
 
 		game.GameLoop(&window, &renderer);

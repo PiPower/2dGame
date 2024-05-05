@@ -1,7 +1,7 @@
 #pragma once
 #include <DirectXMath.h>
 #include <d3d12.h>
-#include "Rendering/DeviceResources.h"
+#include "../Rendering/DeviceResources.h"
 #include <wrl.h>
 #define INDEX_COUNT 6
 
