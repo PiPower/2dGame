@@ -111,10 +111,10 @@ void GameWorld::processUserInput(Window* window, DeviceResources* device, float 
 	if (window->IsLeftPressed() && cooldown <= 0)
 	{
 
-		XMFLOAT2 mousePositionInWorld = camera->TransformCoordsToWorldCoords({ window->GetMousePosXNormalized(), window->GetMousePosYNormalized() });
+		XMFLOAT2 mousePositionInWolrd = camera->TransformCoordsToWorldCoords({ window->GetMousePosXNormalized(), window->GetMousePosYNormalized() });
 		XMFLOAT2 playerCenter = player->getEntityDescriptor().center;
-		float rayDirX = mousePositionInWorld.x - playerCenter.x;
-		float rayDirY = mousePositionInWorld.y- playerCenter.y;
+		float rayDirX = mousePositionInWolrd.x - playerCenter.x;
+		float rayDirY = mousePositionInWolrd.y - playerCenter.y;
 		float normFactor = sqrtf(rayDirX * rayDirX + rayDirY * rayDirY);
 
 		rayDirX /= normFactor;
@@ -122,7 +122,7 @@ void GameWorld::processUserInput(Window* window, DeviceResources* device, float 
 
 		Bullet* bullet = new Bullet({ device, {playerCenter.x, playerCenter.y}, {0.01f, 0.01f} });
 		bullet->UpdateColor({ 0.9f, 0.4f, 0.36f, 1.0f });
-		bullet->UpdateDisplacementVectors({ rayDirX * dt, rayDirY * dt }, { 0,0 }, 0);
+		bullet->UpdateDisplacementVectors({ rayDirX * dt, rayDirY * dt}, { 0,0 }, 0);
 		bullets.push_back(bullet);
 		RegisterResource(bullet);
 		bulletLifetime.push_back(BULLET_LIFETIME);
