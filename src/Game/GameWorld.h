@@ -29,8 +29,7 @@ private:
 	void testCollisions(float dt);
 	void playerWallCollision(Entity* entity, Entity** collidableTable, int collidableCount);
 	void bulletWallCollision(Bullet* bullet, Entity** collidableTable, int collidableCount);
-	void bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, int collidableCount, 
-											vector<int>& bulletCleanPos, vector<int>& enemyCleanPos);
+	void bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, int collidableCount);
 	void cleanBullet(int i);
 	void cleanEnemy(int i);
 	void RegisterResource(Entity* entity);
@@ -45,6 +44,8 @@ private:
 	vector<Bullet*> bullets;
 	vector<Enemy*> enemies;
 	RenderableResources renderableResources;
+	unsigned int removedBullets;
+	unsigned int removedEnemies;
 	float totalGameTime;
 	TimePoint old;
 };

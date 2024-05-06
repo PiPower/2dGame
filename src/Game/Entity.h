@@ -35,7 +35,7 @@ public:
 	D3D12_GPU_VIRTUAL_ADDRESS getConstantBufferVirtualAddress();
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW* getIndexBufferView();
-	CollisionDescriptor IsColliding(Entity& entity);
+	CollisionDescriptor IsColliding(Entity* entity);
 	PhysicalDescriptor getEntityDescriptor();
 	void UpdateColor(XMFLOAT4 color);
 	void ResolveCollision(CollisionDescriptor& desc);

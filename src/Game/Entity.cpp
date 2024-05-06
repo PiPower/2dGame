@@ -116,7 +116,7 @@ D3D12_INDEX_BUFFER_VIEW* Entity::getIndexBufferView()
 	return &indexBufferView;
 }
 
-CollisionDescriptor Entity::IsColliding(Entity& entity)
+CollisionDescriptor Entity::IsColliding(Entity* entity)
 {
 
 	if (velocity.x == 0 && velocity.y == 0)
@@ -124,18 +124,18 @@ CollisionDescriptor Entity::IsColliding(Entity& entity)
 		return { false };
 	}
 
-	float expanded_x = entity.scale.x + scale.x;
-	float tx_1 = ((entity.translation.x - expanded_x) - translation.x) / velocity.x;
-	float tx_2 = ((entity.translation.x + expanded_x) - translation.x) / velocity.x;
+	float expanded_x = entity->scale.x + scale.x;
+	float tx_1 = ((entity->translation.x - expanded_x) - translation.x) / velocity.x;
+	float tx_2 = ((entity->translation.x + expanded_x) - translation.x) / velocity.x;
 
 	if (tx_1 > tx_2)
 	{
 		swap(tx_1, tx_2);
 	}
 
-	float expanded_y = entity.scale.y + scale.y;
-	float ty_1 = ((entity.translation.y - expanded_y) - translation.y) / velocity.y;
-	float ty_2 = ((entity.translation.y + expanded_y) - translation.y) / velocity.y;
+	float expanded_y = entity->scale.y + scale.y;
+	float ty_1 = ((entity->translation.y - expanded_y) - translation.y) / velocity.y;
+	float ty_2 = ((entity->translation.y + expanded_y) - translation.y) / velocity.y;
 
 	if (ty_1 > ty_2)
 	{
@@ -166,7 +166,7 @@ CollisionDescriptor Entity::IsColliding(Entity& entity)
 		else
 			contact_normal = { 0, -1 };
 
-	return { true, t_hit_near, contact_normal, &entity };
+	return { true, t_hit_near, contact_normal, entity };
 }
 
 PhysicalDescriptor Entity::getEntityDescriptor()

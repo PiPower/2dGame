@@ -4,14 +4,18 @@
 #include "Bullet.h"
 #define COOLDOWN 0.01f
 #define BULLET_LIFETIME 15.0f
+#define DEAD_BULLET -100.0f
+#define BULLET_WIPE 50
+#define ENEMY_WIPE 40
+
 
 using namespace std;
 using namespace std::chrono;
 
 GameWorld::GameWorld(DeviceResources* device, XMFLOAT2 worldBounds)
 	:
-	worldBounds(worldBounds), cooldown(0), totalGameTime(0)
-{
+	worldBounds(worldBounds), cooldown(0), totalGameTime(0), removedBullets(0), removedEnemies(0)
+{ 
 
 	camera = new Camera(device);
 	vector<Entity>* arrayOfObjs = new vector<Entity>();
@@ -80,9 +84,9 @@ void GameWorld::spawnEnemy(DeviceResources* device)
 
 	random_device rd;
 	mt19937 gen(rd());
-	uniform_real_distribution<float> dis(-4.0f, 4.0);
+	uniform_real_distribution<float> dis(-2.0f,2.0);
 	
-	for (int i = 0; i < 300; i++)
+	for (int i = 0; i < 200; i++)
 	{
 		Enemy* enemy = new Enemy({ 1.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05}});
 		enemy->UpdateColor({ 0.9f, 0.2f, 0.2f, 1.0f });
@@ -138,36 +142,46 @@ void GameWorld::testCollisions(float dt)
 {
 	playerWallCollision(player, worldConstructions.data(), worldConstructions.size());
 	player->UpdatePosition();
-	vector<int> cleanupBulletPos;
-	vector<int> cleanupEnemyPos;
+
+
 
 	for (int i = 0; i < bullets.size(); i++)
 	{
+		if (bulletLifetime[i] <= DEAD_BULLET)
+		{
+			continue;
+		}
+
 		bulletLifetime[i] -= dt;
 		if (bulletLifetime[i] <= 0)
 		{
 			cleanBullet(i);
-			cleanupBulletPos.push_back(i);
 			continue;
 		}
 
 		bulletWallCollision(bullets[i], worldConstructions.data(), worldConstructions.size());
-		bulletEnemyCollision(bullets[i], enemies.data(), enemies.size(), cleanupBulletPos, cleanupEnemyPos);
+		bulletEnemyCollision(bullets[i], enemies.data(), enemies.size());
 		if (bullets[i] != nullptr)
 		{
 			bullets[i]->UpdatePosition(true);
 		}
 	}
 
-	for (int i = 0; i < cleanupBulletPos.size(); i++)
+	if( removedBullets >= BULLET_WIPE)
 	{
-		bullets.erase(bullets.begin() + cleanupBulletPos[i] - i);
-		bulletLifetime.erase(bulletLifetime.begin() + cleanupBulletPos[i] - i);
+		auto newBulletEndIter = remove_if(bullets.begin(), bullets.end(), [](Bullet* bullet) { return bullet == nullptr; });
+		bullets.erase(newBulletEndIter, bullets.end());
+		auto newLifetimeEndIter = remove_if(bulletLifetime.begin(), bulletLifetime.end(), [](float& lifetime) { return lifetime == DEAD_BULLET; });
+		bulletLifetime.erase(newLifetimeEndIter, bulletLifetime.end());
+
+		removedBullets = 0;
 	}
 
-	for (int i = 0; i < cleanupEnemyPos.size(); i++)
+	if (removedEnemies >= ENEMY_WIPE)
 	{
-		enemies.erase(enemies.begin() + cleanupEnemyPos[i] - i);
+		auto newEnemiesIter = remove_if(enemies.begin(), enemies.end(), [](Enemy* enemy) { return enemy == nullptr; });
+		enemies.erase(newEnemiesIter, enemies.end());
+		removedEnemies = 0;
 	}
 
 	
@@ -178,7 +192,7 @@ void GameWorld::playerWallCollision(Entity* entity, Entity** collidableTable, in
 	vector < pair<float, Entity*> > collisions;
 	for (int i = 0; i < collidableCount; i++)
 	{
-		CollisionDescriptor coll = entity->IsColliding(*collidableTable[i]);
+		CollisionDescriptor coll = entity->IsColliding(collidableTable[i]);
 
 		if (coll.collisionOccured)
 		{
@@ -195,7 +209,7 @@ void GameWorld::playerWallCollision(Entity* entity, Entity** collidableTable, in
 
 	for (pair<float, Entity*>& collision : collisions)
 	{
-		CollisionDescriptor coll = entity->IsColliding(*collision.second);
+		CollisionDescriptor coll = entity->IsColliding(collision.second);
 		if (coll.collisionOccured)
 		{
 			entity->ResolveCollision(coll);
@@ -210,7 +224,7 @@ void GameWorld::bulletWallCollision(Bullet* bullet, Entity** collidableTable, in
 	vector < pair<float, Entity*> > collisions;
 	for (int i = 0; i < collidableCount; i++)
 	{
-		CollisionDescriptor coll = bullet->IsColliding(*collidableTable[i]);
+		CollisionDescriptor coll = bullet->IsColliding(collidableTable[i]);
 
 		if (coll.collisionOccured)
 		{
@@ -227,7 +241,7 @@ void GameWorld::bulletWallCollision(Bullet* bullet, Entity** collidableTable, in
 
 	for (pair<float, Entity*>& collision : collisions)
 	{
-		CollisionDescriptor coll = bullet->IsColliding(*collision.second);
+		CollisionDescriptor coll = bullet->IsColliding(collision.second);
 		if (coll.collisionOccured)
 		{
 			bullet->ResolveCollision(coll);
@@ -236,8 +250,9 @@ void GameWorld::bulletWallCollision(Bullet* bullet, Entity** collidableTable, in
 	}
 }
 
-void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, int collidableCount, vector<int>& bulletCleanPos, vector<int>& enemyCleanPos)
+void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, int collidableCount)
 {
+	vector < pair<float, int> > collisions;
 	for (int i = 0; i < collidableCount; i++)
 	{
 		if (collidableTable[i] == nullptr)
@@ -245,18 +260,32 @@ void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, in
 			continue;
 		}
 
-		CollisionDescriptor coll = bullet->IsColliding(*collidableTable[i]);
+		CollisionDescriptor coll = bullet->IsColliding(collidableTable[i]);
+		if (coll.collisionOccured)
+		{
+			collisions.emplace_back(coll.t_hit, i);
+		}
+	}
+
+	sort(collisions.begin(), collisions.end(),
+		[](pair<float,int>& obj_1, pair<float, int>& obj_2) {
+			return obj_1.first < obj_2.first;
+		});
+
+
+	for (pair<float, int>& collision : collisions)
+	{
+		CollisionDescriptor coll = bullet->IsColliding(collidableTable[collision.second]);
 		if (coll.collisionOccured)
 		{
 			auto bulletIterator = find(bullets.begin(), bullets.end(), bullet);
 			int index = distance(bullets.begin(), bulletIterator);
 			cleanBullet(index);
-			cleanEnemy(i);
-			bulletCleanPos.push_back(index);
-			enemyCleanPos.push_back(i);
+			cleanEnemy(collision.second);
+			return;
 		}
-	}
 
+	}
 }
 
 void GameWorld::cleanBullet(int i)
@@ -264,15 +293,18 @@ void GameWorld::cleanBullet(int i)
 	UnregisterResource(bullets[i]);
 	Bullet* bullet = bullets[i];
 	bullets[i] = nullptr;
+	bulletLifetime[i] = DEAD_BULLET;
+	removedBullets++;
 	delete bullet;
 }
 
 void GameWorld::cleanEnemy(int i)
 {
 	UnregisterResource(enemies[i]);
-	Enemy* bullet = enemies[i];
+	Enemy* enemy = enemies[i];
 	enemies[i] = nullptr;
-	delete bullet;
+	removedEnemies++;
+	delete enemy;
 }
 
 void GameWorld::RegisterResource(Entity* entity)
