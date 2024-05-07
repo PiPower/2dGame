@@ -24,7 +24,7 @@ public:
 	Camera* getCamera();
 	RenderableResources* getRenderableResources();
 private:
-	void spawnEnemy(DeviceResources* device);
+	void spawnEnemy(DeviceResources* device, float dt);
 	void processUserInput(Window* window, DeviceResources* device, float dt);
 	void testCollisions(float dt);
 	void playerWallCollision(Entity* entity, Entity** collidableTable, int collidableCount);

@@ -44,3 +44,15 @@ void Bullet::UpdatePosition(bool keepVelocity)
 
 	this->Entity::UpdatePosition(keepVelocity);
 }
+
+CollisionDescriptor Bullet::IsCollidingWithEnemy(Enemy* enemy)
+{
+	if (!enemy->isMoving())
+	{
+		return this->IsColliding(enemy);
+	}
+
+
+	return DynamicIntersection(enemy);
+
+}

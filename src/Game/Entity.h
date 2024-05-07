@@ -35,6 +35,16 @@ public:
 	D3D12_GPU_VIRTUAL_ADDRESS getConstantBufferVirtualAddress();
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
 	D3D12_INDEX_BUFFER_VIEW* getIndexBufferView();
+	bool isMoving();
+	CollisionDescriptor DynamicIntersection(Entity* entity);
+	vector<XMFLOAT3> getParallelepipedVecs();
+	bool line(XMFLOAT3* simplex, int* size, XMFLOAT3* dir);
+	bool triangle(XMFLOAT3* simplex, int* size, XMFLOAT3* dir);
+	bool tetrahedron(XMFLOAT3* simplex, int* size, XMFLOAT3* dir);
+	bool nextSimplex(XMFLOAT3* simplex, int* size, XMFLOAT3* dir);
+	vector<XMFLOAT3> getParallelepipedEdges();
+	XMFLOAT3 getSupport(Entity* entity, XMFLOAT3 dir);
+	XMFLOAT3 furthestPointinDir(vector<XMFLOAT3> vecs, XMFLOAT3 dir);
 	CollisionDescriptor IsColliding(Entity* entity);
 	PhysicalDescriptor getEntityDescriptor();
 	void UpdateColor(XMFLOAT4 color);

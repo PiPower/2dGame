@@ -2,7 +2,7 @@
 #include <random>
 #include <algorithm>
 #include "Bullet.h"
-#define COOLDOWN 0.01f
+#define COOLDOWN 0.09f
 #define BULLET_LIFETIME 15.0f
 #define DEAD_BULLET -100.0f
 #define BULLET_WIPE 50
@@ -39,20 +39,14 @@ GameWorld::GameWorld(DeviceResources* device, XMFLOAT2 worldBounds)
 	worldConstructions.push_back( new Entity ({ device, {-worldBounds.x - 0.1f, 0}, {0.1f, worldBounds.x + 0.1f} }));
 	worldConstructions.at(3)->UpdateColor({ dis(gen), dis(gen), dis(gen) , 1 });
 ;
-
-
 	RegisterResource(player);
 
 	for (int i = 0; i < 4; i++)
 	{
 		RegisterResource(worldConstructions[i]);
 	}
-
-
 	old = high_resolution_clock::now();
 
-
-	spawnEnemy(device);
 }
 
 void GameWorld::GameLoop(Window* window, DeviceResources* device)
@@ -65,8 +59,7 @@ void GameWorld::GameLoop(Window* window, DeviceResources* device)
 	processUserInput(window, device, frameTime.count());
 	testCollisions(frameTime.count());
 	camera->UpdateCamera(*player, frameTime.count());
-
-
+	spawnEnemy(device, frameTime.count());
 }
 
 Camera* GameWorld::getCamera()
@@ -79,15 +72,16 @@ RenderableResources* GameWorld::getRenderableResources()
 	return &renderableResources;
 }
 
-void GameWorld::spawnEnemy(DeviceResources* device)
+void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 {
-
+	static int currentCycle = 0;
 	random_device rd;
 	mt19937 gen(rd());
 	uniform_real_distribution<float> dis(-2.0f,2.0);
-	
-	for (int i = 0; i < 200; i++)
+	int cycle = (int)floorf(totalGameTime / 0.4f);
+	if(currentCycle ==0)
 	{
+		currentCycle = 2;
 		Enemy* enemy = new Enemy({ 1.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05}});
 		enemy->UpdateColor({ 0.9f, 0.2f, 0.2f, 1.0f });
 		enemies.push_back(enemy);
@@ -143,7 +137,25 @@ void GameWorld::testCollisions(float dt)
 	playerWallCollision(player, worldConstructions.data(), worldConstructions.size());
 	player->UpdatePosition();
 
+	XMFLOAT2 playerCenter = player->getEntityDescriptor().center;
+	XMVECTOR playerCenterVec = XMLoadFloat2(&playerCenter);
+	for (int i = 0; i < enemies.size(); i++)
+	{
+		Enemy* enemy = enemies[i];
+		if (enemy == nullptr)
+		{
+			continue;
+		}
+		XMFLOAT2 enemyCenter = enemy->getEntityDescriptor().center;
+		XMVECTOR enemyCenterVec = XMLoadFloat2(&enemyCenter);
 
+		XMVECTOR dirVec = playerCenterVec - enemyCenterVec;
+		dirVec = XMVector2Normalize(dirVec) * dt;
+		XMFLOAT2 velocity;
+		XMStoreFloat2(&velocity, dirVec);
+
+		enemy->UpdateDisplacementVectors(velocity, { 0,0 }, 0);
+	}
 
 	for (int i = 0; i < bullets.size(); i++)
 	{
@@ -167,6 +179,15 @@ void GameWorld::testCollisions(float dt)
 		}
 	}
 
+	for (int i = 0; i < enemies.size(); i++)
+	{
+		Enemy* enemy = enemies[i];
+		if (enemy == nullptr)
+		{
+			continue;
+		}
+		enemy->UpdatePosition();
+	}
 	if( removedBullets >= BULLET_WIPE)
 	{
 		auto newBulletEndIter = remove_if(bullets.begin(), bullets.end(), [](Bullet* bullet) { return bullet == nullptr; });
@@ -260,7 +281,7 @@ void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, in
 			continue;
 		}
 
-		CollisionDescriptor coll = bullet->IsColliding(collidableTable[i]);
+		CollisionDescriptor coll = bullet->IsCollidingWithEnemy(collidableTable[i]);
 		if (coll.collisionOccured)
 		{
 			collisions.emplace_back(coll.t_hit, i);
