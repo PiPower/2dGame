@@ -2,6 +2,44 @@
 #include <math.h>
 #include <cmath>
 #include <DirectXCollision.h>
+#include <array>
+
+struct Simplex {
+private:
+	std::array<XMFLOAT3, 4> m_points;
+	int m_size;
+
+public:
+	Simplex()
+		: m_size(0)
+	{}
+
+	Simplex& operator=(std::initializer_list<XMFLOAT3> list)
+	{
+		m_size = 0;
+		for (XMFLOAT3 point : list)
+			m_points[m_size++] = point;
+
+		return *this;
+	}
+
+	void push_front(XMFLOAT3 point)
+	{
+		m_points = { point, m_points[0], m_points[1], m_points[2] };
+		m_size = min(m_size + 1, 4);
+	}
+
+	XMFLOAT3& operator[](int i) { return m_points[i]; }
+	size_t size() const { return m_size; }
+
+	auto begin() const { return m_points.begin(); }
+	auto end() const { return m_points.end() - (4 - m_size); }
+};
+
+
+
+
+
 using namespace DirectX;
 
 
@@ -130,22 +168,28 @@ CollisionDescriptor Entity::DynamicIntersection(Entity* entity)
 	XMFLOAT3 parallelepipedCenterEntity{ entity->translation.x + 0.5f * entity->velocity.x, entity->translation.y + 0.5f * entity->velocity.y, 0.5f };
 
 	// Simplex in 3 dims has 4 edges
-	XMFLOAT3 Simplex[4];
-	Simplex[0] = getSupport(entity, {1,0,0});
+	Simplex simplex;
+	XMFLOAT3 A =  getSupport(entity, {1,0,0});
+	simplex.push_front(A);
 	int i = 1;
 	while (true)
 	{
-		XMFLOAT3 dir = { -Simplex[0].x, -Simplex[0].y, -Simplex[0].z };
+		XMFLOAT3 dir = { -A.x, -A.y, -A.z };
 		XMFLOAT3 newEdge = getSupport(entity, dir);
 		float dotProd = newEdge.x * dir.x + newEdge.y * dir.y + newEdge.z * dir.z;
 		if (dotProd <= 0)
 		{
 			return { false };
 		}
-		Simplex[i++] = newEdge;
-		if (nextSimplex(Simplex, &i ,&dir))
+		simplex.push_front(newEdge);
+		if (nextSimplex(simplex, dir))
 		{
-			return { true };
+
+			XMFLOAT2 center = translation;
+			XMFLOAT2 enemyCenter = entity->translation;
+			float diff_x = translation.x - enemyCenter.x;
+			float diff_y = translation.y - enemyCenter.y;
+			return { true , sqrtf(diff_x * diff_x + diff_y* diff_y)   , {0,0}, entity};
 		}
 	}
 }
@@ -173,7 +217,7 @@ vector<XMFLOAT3> Entity::getParallelepipedVecs()
 	return centerEdgeVec;
 }
 
-bool Entity::line(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
+bool Entity::line(Simplex& simplex, XMFLOAT3& dir)
 {
 	XMVECTOR a = XMLoadFloat3(&simplex[0]);
 	XMVECTOR b = XMLoadFloat3(&simplex[1]);
@@ -183,24 +227,25 @@ bool Entity::line(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
 
 	XMVECTOR prod = XMVector3Dot(ab, ao);
 	XMFLOAT3 prodBuff;
+
 	XMStoreFloat3(&prodBuff, prod);
 
 	if (prodBuff.x > 0)
 	{
 		XMStoreFloat3(
-			dir,
+			&dir,
 			XMVector3Cross(XMVector3Cross(ab, ao), ab)
 		);
 	}
 	else
 	{
-		(*size)--;
-		XMStoreFloat3(dir, ao);
+		simplex = { simplex[0] };
+		XMStoreFloat3(&dir, ao);
 	}
 	return false;
 }
 
-bool Entity::triangle(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
+bool Entity::triangle(Simplex& simplex, XMFLOAT3& dir)
 {
 	XMVECTOR a = XMLoadFloat3(&simplex[0]);
 	XMVECTOR b = XMLoadFloat3(&simplex[1]);
@@ -219,14 +264,12 @@ bool Entity::triangle(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
 		XMStoreFloat3(&prodBuff, XMVector2Dot(ac, ao));
 		if (prodBuff.x > 0)
 		{
-			(*size)--;
-			XMStoreFloat3(&simplex[1], c );
-			XMStoreFloat3(dir,XMVector3Cross(XMVector3Cross(ac, ao), ac) );
+			simplex = { simplex[0], simplex[2] };
+			XMStoreFloat3(&dir,XMVector3Cross(XMVector3Cross(ac, ao), ac) );
 		}
 		else
 		{
-			(*size)--;
-			return line(simplex, size, dir);
+			return line(simplex = { simplex[0], simplex[1]}, dir);
 		}
 	}
 	else
@@ -234,8 +277,7 @@ bool Entity::triangle(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
 		XMStoreFloat3(&prodBuff, XMVector2Dot(XMVector3Cross(ab, abc), ao));
 		if (prodBuff.x > 0)
 		{
-			(*size)--;
-			return line(simplex, size, dir);
+			return line(simplex = { simplex[0], simplex[1] }, dir);
 		}
 
 		else
@@ -243,13 +285,13 @@ bool Entity::triangle(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
 			XMStoreFloat3(&prodBuff, XMVector2Dot(abc, ao));
 			if (prodBuff.x > 0)
 			{
-				XMStoreFloat3(dir, abc);
+				XMStoreFloat3(&dir, abc);
 			}
 
 			else
 			{
-				swap(simplex[1], simplex[2]);
-				XMStoreFloat3(dir, -abc);
+				simplex = {simplex[0], simplex[2], simplex[1]};
+				XMStoreFloat3(&dir, -abc);
 			}
 		}
 	}
@@ -258,12 +300,12 @@ bool Entity::triangle(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
 	return false;
 }
 
-bool Entity::tetrahedron(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
+bool Entity::tetrahedron(Simplex& simplex, XMFLOAT3& dir)
 {
 	XMVECTOR a = XMLoadFloat3(&simplex[0]);
 	XMVECTOR b = XMLoadFloat3(&simplex[1]);
 	XMVECTOR c = XMLoadFloat3(&simplex[2]);
-	XMVECTOR d = XMLoadFloat3(&simplex[4]);
+	XMVECTOR d = XMLoadFloat3(&simplex[3]);
 
 	XMVECTOR ab = b - a;
 	XMVECTOR ac = c - a;
@@ -280,39 +322,32 @@ bool Entity::tetrahedron(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
 	XMStoreFloat3(&prodBuff, XMVector2Dot(abc, ao));
 	if (prodBuff.x > 0)
 	{
-		(*size)--;
-		return triangle(simplex, size, dir);
+		return triangle(simplex = {simplex[0], simplex[1], simplex[2]}, dir);
 	}
 
 	XMStoreFloat3(&prodBuff, XMVector2Dot(acd, ao));
 	if (prodBuff.x > 0)
 	{
-		(*size)--;
-		simplex[1] = simplex[2];
-		simplex[2] = simplex[3];
-		return triangle(simplex, size, dir);
+		return triangle(simplex = {simplex[0], simplex[2], simplex[3]}, dir);
 	}
 
 	XMStoreFloat3(&prodBuff, XMVector2Dot(adb, ao));
 	if (prodBuff.x > 0)
 	{
-		(*size)--;
-		simplex[2] = simplex[1];
-		simplex[1] = simplex[3];
-		return triangle(simplex, size, dir);
+		return triangle(simplex = { simplex[0], simplex[3], simplex[1]}, dir);
 	}
 
 	return true;
 }
 
-bool Entity::nextSimplex(XMFLOAT3* simplex, int* size, XMFLOAT3* dir)
+bool Entity::nextSimplex(Simplex& simplex, XMFLOAT3& dir)
 {
 
-	switch (*size)
+	switch (simplex.size())
 	{
-	case 2: return line(simplex, size, dir);
-	case 3: return triangle(simplex, size, dir);
-	case 4: return tetrahedron(simplex, size, dir);
+	case 2: return line(simplex, dir);
+	case 3: return triangle(simplex, dir);
+	case 4: return tetrahedron(simplex, dir);
 	default:
 		printf("unsupported number of vertecies for simples\n");
 		exit(-1);

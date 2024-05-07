@@ -79,9 +79,9 @@ void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 	mt19937 gen(rd());
 	uniform_real_distribution<float> dis(-2.0f,2.0);
 	int cycle = (int)floorf(totalGameTime / 0.4f);
-	if(currentCycle ==0)
+	if (currentCycle < cycle)
 	{
-		currentCycle = 2;
+		currentCycle = cycle;
 		Enemy* enemy = new Enemy({ 1.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05}});
 		enemy->UpdateColor({ 0.9f, 0.2f, 0.2f, 1.0f });
 		enemies.push_back(enemy);

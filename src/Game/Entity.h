@@ -23,6 +23,8 @@ struct PhysicalDescriptor
 	float height;
 	XMFLOAT2 velocity;
 };
+struct Simplex;
+
 
 class Entity
 {
@@ -38,10 +40,10 @@ public:
 	bool isMoving();
 	CollisionDescriptor DynamicIntersection(Entity* entity);
 	vector<XMFLOAT3> getParallelepipedVecs();
-	bool line(XMFLOAT3* simplex, int* size, XMFLOAT3* dir);
-	bool triangle(XMFLOAT3* simplex, int* size, XMFLOAT3* dir);
-	bool tetrahedron(XMFLOAT3* simplex, int* size, XMFLOAT3* dir);
-	bool nextSimplex(XMFLOAT3* simplex, int* size, XMFLOAT3* dir);
+	bool line(Simplex& simplex, XMFLOAT3& dir);
+	bool triangle(Simplex& simplex, XMFLOAT3& dir);
+	bool tetrahedron(Simplex& simplex, XMFLOAT3& dir);
+	bool nextSimplex(Simplex& simplex, XMFLOAT3& dir);
 	vector<XMFLOAT3> getParallelepipedEdges();
 	XMFLOAT3 getSupport(Entity* entity, XMFLOAT3 dir);
 	XMFLOAT3 furthestPointinDir(vector<XMFLOAT3> vecs, XMFLOAT3 dir);
