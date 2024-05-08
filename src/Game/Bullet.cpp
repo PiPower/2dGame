@@ -52,7 +52,6 @@ CollisionDescriptor Bullet::IsCollidingWithEnemy(Enemy* enemy)
 		return this->IsColliding(enemy);
 	}
 
-
 	return DynamicIntersection(enemy);
 
 }

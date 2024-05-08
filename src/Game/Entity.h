@@ -32,7 +32,8 @@ public:
 	Entity(DeviceResources* device, DirectX::XMFLOAT2 origin,
 						DirectX::XMFLOAT2 scale = { 1,1 }, float rotation = 0);
 	void InitDrawingResources(DeviceResources* device);
-	void UpdateDisplacementVectors(DirectX::XMFLOAT2 dPos, DirectX::XMFLOAT2 dScale, float dRotation);
+	void UpdateDisplacementVectors(DirectX::XMFLOAT2 dVel, DirectX::XMFLOAT2 dScale, float dRotation);
+	void SetDisplacementVectors(DirectX::XMFLOAT2 dVel, DirectX::XMFLOAT2 dScale, float dRotation);
 	void UpdatePosition(bool keepVelocity = false);
 	D3D12_GPU_VIRTUAL_ADDRESS getConstantBufferVirtualAddress();
 	D3D12_VERTEX_BUFFER_VIEW* getVertexBufferView();
@@ -40,10 +41,6 @@ public:
 	bool isMoving();
 	CollisionDescriptor DynamicIntersection(Entity* entity);
 	vector<XMFLOAT3> getParallelepipedVecs();
-	bool line(Simplex& simplex, XMFLOAT3& dir);
-	bool triangle(Simplex& simplex, XMFLOAT3& dir);
-	bool tetrahedron(Simplex& simplex, XMFLOAT3& dir);
-	bool nextSimplex(Simplex& simplex, XMFLOAT3& dir);
 	vector<XMFLOAT3> getParallelepipedEdges();
 	XMFLOAT3 getSupport(Entity* entity, XMFLOAT3 dir);
 	XMFLOAT3 furthestPointinDir(vector<XMFLOAT3> vecs, XMFLOAT3 dir);

@@ -4,42 +4,6 @@
 #include <DirectXCollision.h>
 #include <array>
 
-struct Simplex {
-private:
-	std::array<XMFLOAT3, 4> m_points;
-	int m_size;
-
-public:
-	Simplex()
-		: m_size(0)
-	{}
-
-	Simplex& operator=(std::initializer_list<XMFLOAT3> list)
-	{
-		m_size = 0;
-		for (XMFLOAT3 point : list)
-			m_points[m_size++] = point;
-
-		return *this;
-	}
-
-	void push_front(XMFLOAT3 point)
-	{
-		m_points = { point, m_points[0], m_points[1], m_points[2] };
-		m_size = min(m_size + 1, 4);
-	}
-
-	XMFLOAT3& operator[](int i) { return m_points[i]; }
-	size_t size() const { return m_size; }
-
-	auto begin() const { return m_points.begin(); }
-	auto end() const { return m_points.end() - (4 - m_size); }
-};
-
-
-
-
-
 using namespace DirectX;
 
 
@@ -102,15 +66,26 @@ void Entity::InitDrawingResources(DeviceResources* device)
 	indexBufferView.SizeInBytes = sizeof(unsigned int) * 6;
 }
 
-void Entity::UpdateDisplacementVectors(DirectX::XMFLOAT2 velocity, DirectX::XMFLOAT2 dScale, float dRotation)
+void Entity::UpdateDisplacementVectors(DirectX::XMFLOAT2 dVel, DirectX::XMFLOAT2 dScale, float dRotation)
 {
-	this->velocity.x += velocity.x;
-	this->velocity.y += velocity.y;
+	this->velocity.x += dVel.x;
+	this->velocity.y += dVel.y;
 
 	this->dScale.x += dScale.x;
 	this->dScale.y += dScale.y;
 
 	this->dRotation += dRotation;
+}
+
+void Entity::SetDisplacementVectors(DirectX::XMFLOAT2 dVel, DirectX::XMFLOAT2 dScale, float dRotation)
+{
+	this->velocity.x = dVel.x;
+	this->velocity.y = dVel.y;
+
+	this->dScale.x = dScale.x;
+	this->dScale.y = dScale.y;
+
+	this->dRotation = dRotation;
 }
 
 void Entity::UpdatePosition(bool keepVelocity)
@@ -162,36 +137,12 @@ bool Entity::isMoving()
 
 CollisionDescriptor Entity::DynamicIntersection(Entity* entity)
 {
-	// GJK algorithm
-	// 3rd dim is time 
-	XMFLOAT3 parallelepipedCenter{ translation.x + 0.5f * velocity.x, translation.y + 0.5f * velocity.y, 0.5f };
-	XMFLOAT3 parallelepipedCenterEntity{ entity->translation.x + 0.5f * entity->velocity.x, entity->translation.y + 0.5f * entity->velocity.y, 0.5f };
-
-	// Simplex in 3 dims has 4 edges
-	Simplex simplex;
-	XMFLOAT3 A =  getSupport(entity, {1,0,0});
-	simplex.push_front(A);
-	int i = 1;
-	while (true)
-	{
-		XMFLOAT3 dir = { -A.x, -A.y, -A.z };
-		XMFLOAT3 newEdge = getSupport(entity, dir);
-		float dotProd = newEdge.x * dir.x + newEdge.y * dir.y + newEdge.z * dir.z;
-		if (dotProd <= 0)
-		{
-			return { false };
-		}
-		simplex.push_front(newEdge);
-		if (nextSimplex(simplex, dir))
-		{
-
-			XMFLOAT2 center = translation;
-			XMFLOAT2 enemyCenter = entity->translation;
-			float diff_x = translation.x - enemyCenter.x;
-			float diff_y = translation.y - enemyCenter.y;
-			return { true , sqrtf(diff_x * diff_x + diff_y* diff_y)   , {0,0}, entity};
-		}
-	}
+	// using change of refrence 
+	XMFLOAT2 velocityBuffer = velocity;
+	velocity = { velocity.x - entity->velocity.x, velocity.y - entity->velocity.y };
+	CollisionDescriptor desc = this->IsColliding(entity);
+	velocity = velocityBuffer;
+	return desc;
 }
 
 vector<XMFLOAT3> Entity::getParallelepipedVecs()
@@ -217,144 +168,6 @@ vector<XMFLOAT3> Entity::getParallelepipedVecs()
 	return centerEdgeVec;
 }
 
-bool Entity::line(Simplex& simplex, XMFLOAT3& dir)
-{
-	XMVECTOR a = XMLoadFloat3(&simplex[0]);
-	XMVECTOR b = XMLoadFloat3(&simplex[1]);
-
-	XMVECTOR ab = b - a;
-	XMVECTOR ao = -a;
-
-	XMVECTOR prod = XMVector3Dot(ab, ao);
-	XMFLOAT3 prodBuff;
-
-	XMStoreFloat3(&prodBuff, prod);
-
-	if (prodBuff.x > 0)
-	{
-		XMStoreFloat3(
-			&dir,
-			XMVector3Cross(XMVector3Cross(ab, ao), ab)
-		);
-	}
-	else
-	{
-		simplex = { simplex[0] };
-		XMStoreFloat3(&dir, ao);
-	}
-	return false;
-}
-
-bool Entity::triangle(Simplex& simplex, XMFLOAT3& dir)
-{
-	XMVECTOR a = XMLoadFloat3(&simplex[0]);
-	XMVECTOR b = XMLoadFloat3(&simplex[1]);
-	XMVECTOR c = XMLoadFloat3(&simplex[2]);
-
-	XMVECTOR ab = b - a;
-	XMVECTOR ac = c - a;
-	XMVECTOR ao = -a;
-
-	XMVECTOR abc = XMVector3Cross(ab, ac);
-	XMFLOAT3 prodBuff;
-
-	XMStoreFloat3(&prodBuff,  XMVector2Dot(XMVector3Cross(abc, ac), ao) );
-	if (prodBuff.x > 0)
-	{
-		XMStoreFloat3(&prodBuff, XMVector2Dot(ac, ao));
-		if (prodBuff.x > 0)
-		{
-			simplex = { simplex[0], simplex[2] };
-			XMStoreFloat3(&dir,XMVector3Cross(XMVector3Cross(ac, ao), ac) );
-		}
-		else
-		{
-			return line(simplex = { simplex[0], simplex[1]}, dir);
-		}
-	}
-	else
-	{
-		XMStoreFloat3(&prodBuff, XMVector2Dot(XMVector3Cross(ab, abc), ao));
-		if (prodBuff.x > 0)
-		{
-			return line(simplex = { simplex[0], simplex[1] }, dir);
-		}
-
-		else
-		{
-			XMStoreFloat3(&prodBuff, XMVector2Dot(abc, ao));
-			if (prodBuff.x > 0)
-			{
-				XMStoreFloat3(&dir, abc);
-			}
-
-			else
-			{
-				simplex = {simplex[0], simplex[2], simplex[1]};
-				XMStoreFloat3(&dir, -abc);
-			}
-		}
-	}
-
-
-	return false;
-}
-
-bool Entity::tetrahedron(Simplex& simplex, XMFLOAT3& dir)
-{
-	XMVECTOR a = XMLoadFloat3(&simplex[0]);
-	XMVECTOR b = XMLoadFloat3(&simplex[1]);
-	XMVECTOR c = XMLoadFloat3(&simplex[2]);
-	XMVECTOR d = XMLoadFloat3(&simplex[3]);
-
-	XMVECTOR ab = b - a;
-	XMVECTOR ac = c - a;
-	XMVECTOR ad = d - a;
-	XMVECTOR ao = -a;
-
-	XMVECTOR abc = XMVector3Cross(ab, ac);
-	XMVECTOR acd = XMVector3Cross(ac, ad);
-	XMVECTOR adb = XMVector3Cross(ad, ab);
-
-	XMFLOAT3 prodBuff;
-
-
-	XMStoreFloat3(&prodBuff, XMVector2Dot(abc, ao));
-	if (prodBuff.x > 0)
-	{
-		return triangle(simplex = {simplex[0], simplex[1], simplex[2]}, dir);
-	}
-
-	XMStoreFloat3(&prodBuff, XMVector2Dot(acd, ao));
-	if (prodBuff.x > 0)
-	{
-		return triangle(simplex = {simplex[0], simplex[2], simplex[3]}, dir);
-	}
-
-	XMStoreFloat3(&prodBuff, XMVector2Dot(adb, ao));
-	if (prodBuff.x > 0)
-	{
-		return triangle(simplex = { simplex[0], simplex[3], simplex[1]}, dir);
-	}
-
-	return true;
-}
-
-bool Entity::nextSimplex(Simplex& simplex, XMFLOAT3& dir)
-{
-
-	switch (simplex.size())
-	{
-	case 2: return line(simplex, dir);
-	case 3: return triangle(simplex, dir);
-	case 4: return tetrahedron(simplex, dir);
-	default:
-		printf("unsupported number of vertecies for simples\n");
-		exit(-1);
-		break;
-	}
-	return false;
-}
 
 vector<XMFLOAT3> Entity::getParallelepipedEdges()
 {
@@ -431,7 +244,12 @@ CollisionDescriptor Entity::IsColliding(Entity* entity)
 	}
 
 	float expanded_y = entity->scale.y + scale.y;
+	float p = (entity->translation.y - expanded_y);
+	float z = ((entity->translation.y - expanded_y) - translation.y);
 	float ty_1 = ((entity->translation.y - expanded_y) - translation.y) / velocity.y;
+
+	p = (entity->translation.y + expanded_y);
+	z = ((entity->translation.y + expanded_y) - translation.y);
 	float ty_2 = ((entity->translation.y + expanded_y) - translation.y) / velocity.y;
 
 	if (ty_1 > ty_2)

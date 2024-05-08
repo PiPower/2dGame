@@ -2,7 +2,7 @@
 #include <random>
 #include <algorithm>
 #include "Bullet.h"
-#define COOLDOWN 0.09f
+#define COOLDOWN 0.04f
 #define BULLET_LIFETIME 15.0f
 #define DEAD_BULLET -100.0f
 #define BULLET_WIPE 50
@@ -14,7 +14,7 @@ using namespace std::chrono;
 
 GameWorld::GameWorld(DeviceResources* device, XMFLOAT2 worldBounds)
 	:
-	worldBounds(worldBounds), cooldown(0), totalGameTime(0), removedBullets(0), removedEnemies(0)
+	worldBounds(worldBounds), cooldown(0), totalGameTime(0), removedBullets(0), removedEnemies(0), respawn_time(1.0f)
 { 
 
 	camera = new Camera(device);
@@ -53,13 +53,14 @@ void GameWorld::GameLoop(Window* window, DeviceResources* device)
 {
 	const duration<float> frameTime = high_resolution_clock::now() - old;
 	old = high_resolution_clock::now();
-	totalGameTime += frameTime.count();
+	float dt = frameTime.count();
+	totalGameTime += dt;
 
 
-	processUserInput(window, device, frameTime.count());
-	testCollisions(frameTime.count());
-	camera->UpdateCamera(*player, frameTime.count());
-	spawnEnemy(device, frameTime.count());
+	processUserInput(window, device, dt);
+	testCollisions(dt);
+	camera->UpdateCamera(*player, dt);
+	spawnEnemy(device, dt);
 }
 
 Camera* GameWorld::getCamera()
@@ -77,7 +78,7 @@ void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 	static int currentCycle = 0;
 	random_device rd;
 	mt19937 gen(rd());
-	uniform_real_distribution<float> dis(-2.0f,2.0);
+	uniform_real_distribution<float> dis(-2, 2);
 	int cycle = (int)floorf(totalGameTime / 0.4f);
 	if (currentCycle < cycle)
 	{
@@ -87,6 +88,7 @@ void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 		enemies.push_back(enemy);
 		RegisterResource(enemy);
 	}
+
 }
 
 void GameWorld::processUserInput(Window* window, DeviceResources* device, float dt)
@@ -154,11 +156,12 @@ void GameWorld::testCollisions(float dt)
 		XMFLOAT2 velocity;
 		XMStoreFloat2(&velocity, dirVec);
 
-		enemy->UpdateDisplacementVectors(velocity, { 0,0 }, 0);
+		enemy->UpdateDisplacementVectors(velocity, {0,0}, 0);
 	}
 
 	for (int i = 0; i < bullets.size(); i++)
 	{
+
 		if (bulletLifetime[i] <= DEAD_BULLET)
 		{
 			continue;
@@ -296,7 +299,7 @@ void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, in
 
 	for (pair<float, int>& collision : collisions)
 	{
-		CollisionDescriptor coll = bullet->IsColliding(collidableTable[collision.second]);
+		CollisionDescriptor coll = bullet->IsCollidingWithEnemy(collidableTable[collision.second]);
 		if (coll.collisionOccured)
 		{
 			auto bulletIterator = find(bullets.begin(), bullets.end(), bullet);
