@@ -48,6 +48,7 @@ private:
 	unsigned int removedEnemies;
 	float totalGameTime;
 	TimePoint old;
-	float respawn_time;
+	float respawnTime;
+	float respawnDelta;
 };
 

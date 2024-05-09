@@ -2,19 +2,20 @@
 #include <random>
 #include <algorithm>
 #include "Bullet.h"
-#define COOLDOWN 0.04f
+#define COOLDOWN 0.02f
 #define BULLET_LIFETIME 15.0f
 #define DEAD_BULLET -100.0f
 #define BULLET_WIPE 50
 #define ENEMY_WIPE 40
-
+#define RESPAWN_DELTA_MUL 0.7f
+#define RESPAWN_DELTA_CAP 0.05f
 
 using namespace std;
 using namespace std::chrono;
 
 GameWorld::GameWorld(DeviceResources* device, XMFLOAT2 worldBounds)
 	:
-	worldBounds(worldBounds), cooldown(0), totalGameTime(0), removedBullets(0), removedEnemies(0), respawn_time(1.0f)
+	worldBounds(worldBounds), cooldown(0), totalGameTime(0), removedBullets(0), removedEnemies(0), respawnTime(0.0f), respawnDelta(1.0f)
 { 
 
 	camera = new Camera(device);
@@ -75,19 +76,22 @@ RenderableResources* GameWorld::getRenderableResources()
 
 void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 {
-	static int currentCycle = 0;
 	random_device rd;
 	mt19937 gen(rd());
 	uniform_real_distribution<float> dis(-2, 2);
-	int cycle = (int)floorf(totalGameTime / 0.4f);
-	if (currentCycle < cycle)
+
+	if (totalGameTime - respawnTime >= respawnDelta)
 	{
-		currentCycle = cycle;
+		respawnDelta *= RESPAWN_DELTA_MUL;
+		respawnDelta = respawnDelta < RESPAWN_DELTA_CAP ? RESPAWN_DELTA_CAP : respawnDelta;
+
+		respawnTime = totalGameTime;
 		Enemy* enemy = new Enemy({ 1.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05}});
 		enemy->UpdateColor({ 0.9f, 0.2f, 0.2f, 1.0f });
 		enemies.push_back(enemy);
 		RegisterResource(enemy);
 	}
+
 
 }
 
@@ -276,7 +280,7 @@ void GameWorld::bulletWallCollision(Bullet* bullet, Entity** collidableTable, in
 
 void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, int collidableCount)
 {
-	vector < pair<float, int> > collisions;
+	vector < pair<float, Entity*> > collisions;
 	for (int i = 0; i < collidableCount; i++)
 	{
 		if (collidableTable[i] == nullptr)
@@ -287,25 +291,28 @@ void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, in
 		CollisionDescriptor coll = bullet->IsCollidingWithEnemy(collidableTable[i]);
 		if (coll.collisionOccured)
 		{
-			collisions.emplace_back(coll.t_hit, i);
+			collisions.emplace_back(coll.t_hit, collidableTable[i]);
 		}
 	}
 
 	sort(collisions.begin(), collisions.end(),
-		[](pair<float,int>& obj_1, pair<float, int>& obj_2) {
+		[](pair<float, Entity*>& obj_1, pair<float, Entity*>& obj_2) {
 			return obj_1.first < obj_2.first;
 		});
 
 
-	for (pair<float, int>& collision : collisions)
+	for (pair<float, Entity*>& collision : collisions)
 	{
-		CollisionDescriptor coll = bullet->IsCollidingWithEnemy(collidableTable[collision.second]);
+		CollisionDescriptor coll = bullet->IsCollidingWithEnemy((Enemy*)collision.second);
 		if (coll.collisionOccured)
 		{
 			auto bulletIterator = find(bullets.begin(), bullets.end(), bullet);
 			int index = distance(bullets.begin(), bulletIterator);
 			cleanBullet(index);
-			cleanEnemy(collision.second);
+
+			auto enemytIterator = find(enemies.begin(), enemies.end(), coll.collider);
+			int enemyIndex = distance(enemies.begin(), enemytIterator);
+			cleanEnemy(enemyIndex);
 			return;
 		}
 
