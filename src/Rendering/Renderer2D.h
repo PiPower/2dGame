@@ -27,7 +27,7 @@ protected:
 	void CompileShaders();
 	void CreateRootSignature();
 	void CreateLocalPipeline();
-	//void CreateTexture(ID3D12Resource** uploadBuffer);
+	void CreateTexture(ID3D12Resource** uploadBuffer, std::wstring path);
 private:
 	UINT* wtMap;
 	ComPtr<ID3D12PipelineState> graphicsPipeline;
@@ -36,11 +36,10 @@ private:
 	ComPtr<ID3DBlob> ps_shaderBlob;
 	D3D12_GPU_VIRTUAL_ADDRESS worldTransform;
 	ComPtr<ID3D12Resource> test_vb;
+	D3D12_RESOURCE_BARRIER transitionTable[4];
+
+
 	ComPtr<ID3D12Resource> texture;
 	ComPtr<ID3D12DescriptorHeap> textureHeap;
-	unsigned char* TextureData;
-	D3D12_RESOURCE_BARRIER transitionTable[4];
-	D3D12_TEXTURE_COPY_LOCATION textureLocation;
-	D3D12_TEXTURE_COPY_LOCATION bufferLocation;
 };
 

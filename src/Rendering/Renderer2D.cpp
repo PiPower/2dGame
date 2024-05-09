@@ -1,19 +1,19 @@
 #include "Renderer2D.h"
 #include "d3dx12.h"
 #include <d3dcompiler.h>
+#include "ImageFile.h"
 
 Renderer2D::Renderer2D(HWND hwnd)
 	:
 	DeviceResources(hwnd)
 {
 	ComPtr<ID3D12Resource> uploadBuffer;
-
+	
 	NOT_SUCCEEDED(CommandAllocator->Reset());
 	NOT_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), nullptr));
 	CompileShaders();
 	CreateRootSignature();
 	CreateLocalPipeline();
-	//CreateTexture(&uploadBuffer);
 	NOT_SUCCEEDED(CommandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { CommandList.Get() };
 	CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
@@ -48,7 +48,7 @@ void Renderer2D::StartRecording()
 	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	CommandList->SetGraphicsRootConstantBufferView((int)RootSignatureEntry::WorldTransform, worldTransform);
 	//CommandList->SetDescriptorHeaps(1, textureHeap.GetAddressOf());
-	//CommandList->SetGraphicsRootDescriptorTable(2, textureHeap->GetGPUDescriptorHandleForHeapStart());
+	//CommandList->SetGraphicsRootDescriptorTable((int)RootSignatureEntry::Texture, textureHeap->GetGPUDescriptorHandleForHeapStart());
 }
 
 
@@ -174,4 +174,59 @@ void Renderer2D::CreateLocalPipeline()
 	psoDesc.SampleDesc.Quality = 0;
 	psoDesc.DSVFormat = DsvFormat;
 	NOT_SUCCEEDED(Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&graphicsPipeline)));
+}
+
+void Renderer2D::CreateTexture(ID3D12Resource** uploadBuffer, std::wstring path)
+{
+	D3D12_TEXTURE_COPY_LOCATION bufferLocation;
+	D3D12_TEXTURE_COPY_LOCATION textureLocation;
+	ImageFile sprite(path);
+
+	CreateTexture2D(&texture, sprite.GetWidth(), sprite.GetHeight(), 1, D3D12_RESOURCE_FLAG_NONE, DXGI_FORMAT_R8G8B8A8_UNORM);
+	CreateTextureDH(&textureHeap, 1, texture.GetAddressOf());
+
+	UINT64 bufferSize;
+
+	textureLocation.pResource = texture.Get();
+	textureLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	textureLocation.SubresourceIndex = 0;
+	D3D12_RESOURCE_DESC textureDesc = texture->GetDesc();
+
+	Device->GetCopyableFootprints(&textureDesc, 0, 1, 0, &bufferLocation.PlacedFootprint, nullptr, nullptr, &bufferSize);
+	CreateUploadBuffer(uploadBuffer, bufferSize);
+
+	UINT* mapPtr;
+	(*uploadBuffer)->Map(0, nullptr, (void**)&mapPtr);
+	char* const textureData = (char* const)sprite.GetFilePtr();
+	char* map = (char*)mapPtr;
+	for (int y = 0; y < sprite.GetHeight(); y++)
+	{
+		for (int x = 0; x < sprite.GetWidth(); x++)
+		{
+			int gpuBufferOffset = y * bufferLocation.PlacedFootprint.Footprint.RowPitch + x * sizeof(int);
+			int cpuBufferIndex = (y * sprite.GetWidth() + x )* sizeof(int);
+			memcpy(map + gpuBufferOffset, textureData + cpuBufferIndex, sizeof(int) );
+		}
+	}
+
+	
+	bufferLocation.pResource = (*uploadBuffer);
+	bufferLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+
+	// copy buffer to texture
+	transitionTable[0] = CD3DX12_RESOURCE_BARRIER::Transition(texture.Get(),
+		D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST);
+	transitionTable[1] = CD3DX12_RESOURCE_BARRIER::Transition((*uploadBuffer),
+		D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_SOURCE);
+
+	//reverse ubove transition
+	transitionTable[2] = CD3DX12_RESOURCE_BARRIER::Transition(texture.Get(),
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	transitionTable[3] = CD3DX12_RESOURCE_BARRIER::Transition((*uploadBuffer),
+		D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	CommandList->ResourceBarrier(2, transitionTable);
+	CommandList->CopyTextureRegion(&textureLocation, 0, 0, 0, &bufferLocation, nullptr);
+	CommandList->ResourceBarrier(2, transitionTable + 2);
+
 }

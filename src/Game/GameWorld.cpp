@@ -2,13 +2,16 @@
 #include <random>
 #include <algorithm>
 #include "Bullet.h"
-#define COOLDOWN 0.02f
+#define COOLDOWN 0.013f
 #define BULLET_LIFETIME 15.0f
 #define DEAD_BULLET -100.0f
 #define BULLET_WIPE 50
 #define ENEMY_WIPE 40
 #define RESPAWN_DELTA_MUL 0.7f
 #define RESPAWN_DELTA_CAP 0.05f
+#define WEAK_ENEMY 0.2f
+#define MIDDLE_ENEMY 0.6f
+#define STRONG_ENEMY 0.18f
 
 using namespace std;
 using namespace std::chrono;
@@ -76,9 +79,11 @@ RenderableResources* GameWorld::getRenderableResources()
 
 void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 {
-	random_device rd;
-	mt19937 gen(rd());
-	uniform_real_distribution<float> dis(-2, 2);
+	static random_device rd;
+	static mt19937 gen(rd());
+	static uniform_real_distribution<float> dis(-2, 2);
+	static uniform_real_distribution<float> disEnemyType(0, 1);
+
 
 	if (totalGameTime - respawnTime >= respawnDelta)
 	{
@@ -86,8 +91,30 @@ void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 		respawnDelta = respawnDelta < RESPAWN_DELTA_CAP ? RESPAWN_DELTA_CAP : respawnDelta;
 
 		respawnTime = totalGameTime;
-		Enemy* enemy = new Enemy({ 1.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05}});
-		enemy->UpdateColor({ 0.9f, 0.2f, 0.2f, 1.0f });
+		float enemyType = disEnemyType(gen);
+		Enemy* enemy;
+		if (enemyType <=  WEAK_ENEMY)
+		{
+			enemy = new Enemy({ 1.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05} });
+			enemy->UpdateColor({ 0.4f, 0.2f, 0.2f, 1.0f });
+		}
+		else if (enemyType <= (WEAK_ENEMY + MIDDLE_ENEMY))
+		{
+			enemy = new Enemy({ 2.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05} });
+			enemy->UpdateColor({ 0.6f, 0.2f, 0.2f, 1.0f });
+		}
+		else if (enemyType <= (WEAK_ENEMY + MIDDLE_ENEMY + STRONG_ENEMY))
+		{
+			enemy = new Enemy({ 3.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05} });
+			enemy->UpdateColor({ 1.0f, 0.2f, 0.2f, 1.0f });
+		}
+		else
+		{
+			enemy = new Enemy({ 8.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05} });
+			enemy->UpdateColor({ 0.0f, 0.0f, 0.0f, 1.0f });
+		}
+
+
 		enemies.push_back(enemy);
 		RegisterResource(enemy);
 	}
@@ -290,13 +317,17 @@ void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, in
 		CollisionDescriptor coll = bullet->IsCollidingWithEnemy((Enemy*)collision.second);
 		if (coll.collisionOccured)
 		{
+			auto enemytIterator = find(enemies.begin(), enemies.end(), coll.collider);
+			int enemyIndex = distance(enemies.begin(), enemytIterator);
+			if (((Enemy*)collision.second)->DealDamage(bullet->GetDamage()))
+			{
+				cleanEnemy(enemyIndex);
+			}
+
 			auto bulletIterator = find(bullets.begin(), bullets.end(), bullet);
 			int index = distance(bullets.begin(), bulletIterator);
 			cleanBullet(index);
 
-			auto enemytIterator = find(enemies.begin(), enemies.end(), coll.collider);
-			int enemyIndex = distance(enemies.begin(), enemytIterator);
-			cleanEnemy(enemyIndex);
 			return;
 		}
 

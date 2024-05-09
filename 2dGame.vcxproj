@@ -139,6 +139,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Rendering\ImageFile.cpp" />
     <ClCompile Include="src\Game\Enemy.cpp" />
     <ClCompile Include="src\Game\Bullet.cpp" />
     <ClCompile Include="src\Game\GameWorld.cpp" />
@@ -186,6 +187,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Rendering\ImageFile.h" />
     <ClInclude Include="src\Game\Enemy.h" />
     <ClInclude Include="src\Game\Bullet.h" />
     <ClInclude Include="src\Game\GameWorld.h" />

@@ -1,8 +1,12 @@
 #include "Bullet.h"
 
-Bullet::Bullet(DeviceResources* device, DirectX::XMFLOAT2 origin, DirectX::XMFLOAT2 scale)
+float damageTable[] = {1.0f};
+
+
+
+Bullet::Bullet(DeviceResources* device, DirectX::XMFLOAT2 origin, DirectX::XMFLOAT2 scale, BulletType bulletType)
 	:
-	Entity(device, origin, scale), velocityBuffer(0,0)
+	Entity(device, origin, scale), velocityBuffer(0,0), bulletType(bulletType)
 {
 }
 
@@ -43,6 +47,11 @@ void Bullet::UpdatePosition(bool keepVelocity)
 	}
 
 	this->Entity::UpdatePosition(keepVelocity);
+}
+
+float Bullet::GetDamage()
+{
+	return damageTable[(int)bulletType];
 }
 
 CollisionDescriptor Bullet::IsCollidingWithEnemy(Enemy* enemy)
