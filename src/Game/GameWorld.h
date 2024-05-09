@@ -34,6 +34,7 @@ private:
 	void cleanEnemy(int i);
 	void RegisterResource(Entity* entity);
 	void UnregisterResource(Entity* entity);
+	void SpawnBullet(DeviceResources* device, Window* window, float dt);
 private:
 	float cooldown;
 	Entity* player;
@@ -44,6 +45,7 @@ private:
 	vector<Bullet*> bullets;
 	vector<Enemy*> enemies;
 	RenderableResources renderableResources;
+	vector < pair<float, Entity*> > collisions;
 	unsigned int removedBullets;
 	unsigned int removedEnemies;
 	float totalGameTime;

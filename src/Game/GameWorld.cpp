@@ -17,7 +17,7 @@ GameWorld::GameWorld(DeviceResources* device, XMFLOAT2 worldBounds)
 	:
 	worldBounds(worldBounds), cooldown(0), totalGameTime(0), removedBullets(0), removedEnemies(0), respawnTime(0.0f), respawnDelta(1.0f)
 { 
-
+	collisions.reserve(200);
 	camera = new Camera(device);
 	vector<Entity>* arrayOfObjs = new vector<Entity>();
 	random_device rd;
@@ -114,23 +114,7 @@ void GameWorld::processUserInput(Window* window, DeviceResources* device, float 
 	cooldown -= dt;
 	if (window->IsLeftPressed() && cooldown <= 0)
 	{
-
-		XMFLOAT2 mousePositionInWolrd = camera->TransformCoordsToWorldCoords({ window->GetMousePosXNormalized(), window->GetMousePosYNormalized() });
-		XMFLOAT2 playerCenter = player->getEntityDescriptor().center;
-		float rayDirX = mousePositionInWolrd.x - playerCenter.x;
-		float rayDirY = mousePositionInWolrd.y - playerCenter.y;
-		float normFactor = sqrtf(rayDirX * rayDirX + rayDirY * rayDirY);
-
-		rayDirX /= normFactor;
-		rayDirY /= normFactor;
-
-		Bullet* bullet = new Bullet({ device, {playerCenter.x, playerCenter.y}, {0.01f, 0.01f} });
-		bullet->UpdateColor({ 0.9f, 0.4f, 0.36f, 1.0f });
-		bullet->UpdateDisplacementVectors({ rayDirX * dt, rayDirY * dt}, { 0,0 }, 0);
-		bullets.push_back(bullet);
-		RegisterResource(bullet);
-		bulletLifetime.push_back(BULLET_LIFETIME);
-		cooldown = COOLDOWN;
+		SpawnBullet(device, window, dt);
 	}
 
 	player->UpdateDisplacementVectors({x * dt, y * dt}, {0, 0}, 0);
@@ -217,7 +201,7 @@ void GameWorld::testCollisions(float dt)
 
 void GameWorld::playerWallCollision(Entity* entity, Entity** collidableTable, int collidableCount)
 {
-	vector < pair<float, Entity*> > collisions;
+	collisions.clear();
 	for (int i = 0; i < collidableCount; i++)
 	{
 		CollisionDescriptor coll = entity->IsColliding(collidableTable[i]);
@@ -249,7 +233,7 @@ void GameWorld::playerWallCollision(Entity* entity, Entity** collidableTable, in
 
 void GameWorld::bulletWallCollision(Bullet* bullet, Entity** collidableTable, int collidableCount)
 {
-	vector < pair<float, Entity*> > collisions;
+	collisions.clear();
 	for (int i = 0; i < collidableCount; i++)
 	{
 		CollisionDescriptor coll = bullet->IsColliding(collidableTable[i]);
@@ -280,7 +264,7 @@ void GameWorld::bulletWallCollision(Bullet* bullet, Entity** collidableTable, in
 
 void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, int collidableCount)
 {
-	vector < pair<float, Entity*> > collisions;
+	collisions.clear();
 	for (int i = 0; i < collidableCount; i++)
 	{
 		if (collidableTable[i] == nullptr)
@@ -358,4 +342,24 @@ void GameWorld::UnregisterResource(Entity* entity)
 	renderableResources.ibViewTable.erase(renderableResources.ibViewTable.begin() + index);
 	renderableResources.vbViewTable.erase(renderableResources.vbViewTable.begin() + index);
 	renderableResources.size--;
+}
+
+void GameWorld::SpawnBullet(DeviceResources* device, Window* window, float dt)
+{
+	XMFLOAT2 mousePositionInWolrd = camera->TransformCoordsToWorldCoords({ window->GetMousePosXNormalized(), window->GetMousePosYNormalized() });
+	XMFLOAT2 playerCenter = player->getEntityDescriptor().center;
+	float rayDirX = mousePositionInWolrd.x - playerCenter.x;
+	float rayDirY = mousePositionInWolrd.y - playerCenter.y;
+	float normFactor = sqrtf(rayDirX * rayDirX + rayDirY * rayDirY);
+
+	rayDirX /= normFactor;
+	rayDirY /= normFactor;
+
+	Bullet* bullet = new Bullet({ device, {playerCenter.x, playerCenter.y}, {0.01f, 0.01f} });
+	bullet->UpdateColor({ 0.9f, 0.4f, 0.36f, 1.0f });
+	bullet->UpdateDisplacementVectors({ rayDirX * dt, rayDirY * dt }, { 0,0 }, 0);
+	bullets.push_back(bullet);
+	RegisterResource(bullet);
+	bulletLifetime.push_back(BULLET_LIFETIME);
+	cooldown = COOLDOWN;
 }
