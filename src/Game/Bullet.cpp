@@ -1,6 +1,6 @@
 #include "Bullet.h"
 
-float damageTable[] = {1.0f};
+float damageTable[] = {1.0f, 0.2};
 
 
 
@@ -63,4 +63,9 @@ CollisionDescriptor Bullet::IsCollidingWithEnemy(Enemy* enemy)
 
 	return DynamicIntersection(enemy);
 
+}
+
+BulletType Bullet::GetBulletType()
+{
+	return bulletType;
 }

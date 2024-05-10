@@ -26,7 +26,7 @@ public:
 private:
 	void spawnEnemy(DeviceResources* device, float dt);
 	void processUserInput(Window* window, DeviceResources* device, float dt);
-	void testCollisions(float dt);
+	void testCollisions(DeviceResources* device, Window* window, float dt);
 	void playerWallCollision(Entity* entity, Entity** collidableTable, int collidableCount);
 	void bulletWallCollision(Bullet* bullet, Entity** collidableTable, int collidableCount);
 	void bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, int collidableCount);
@@ -35,6 +35,7 @@ private:
 	void RegisterResource(Entity* entity);
 	void UnregisterResource(Entity* entity);
 	void SpawnBullet(DeviceResources* device, Window* window, float dt);
+	void BulletExplode(Bullet* bullet, DeviceResources* device, float dt);
 private:
 	float cooldown;
 	Entity* player;
@@ -52,5 +53,6 @@ private:
 	TimePoint old;
 	float respawnTime;
 	float respawnDelta;
+	BulletType currentBulletType;
 };
 

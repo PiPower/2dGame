@@ -4,7 +4,8 @@
 
 enum class BulletType
 {
-	normal_bullet
+	normal_bullet,
+	spawner
 };
 
 class Bullet : public Entity
@@ -16,6 +17,7 @@ public:
 	void UpdatePosition(bool keepVelocity = false);
 	float GetDamage();
 	CollisionDescriptor IsCollidingWithEnemy(Enemy* enemy);
+	BulletType GetBulletType();
 private:
 	XMFLOAT2 velocityBuffer;
 	BulletType bulletType;

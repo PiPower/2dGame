@@ -2,8 +2,6 @@
 #include <random>
 #include <algorithm>
 #include "Bullet.h"
-#define COOLDOWN 0.013f
-#define BULLET_LIFETIME 15.0f
 #define DEAD_BULLET -100.0f
 #define BULLET_WIPE 50
 #define ENEMY_WIPE 40
@@ -13,12 +11,41 @@
 #define MIDDLE_ENEMY 0.6f
 #define STRONG_ENEMY 0.18f
 
+
+float bulletCooldown[] = {
+	0.01f,
+	0.07f
+};
+
+float bulletLifetimeTable[] = {
+	15.0f,
+	2.0f
+};
+
+float velocityScalling[] = {
+	1.0f,
+	0.6f
+};
+
+
+static XMFLOAT2 scaleTable[] = {
+	{ 0.01f, 0.01f },
+	{ 0.03f, 0.03f }
+};
+
+static XMFLOAT4 colorTable[] = {
+	{ 0.9f, 0.4f, 0.36f, 1.0f },
+	{ 0.3f, 0.8f, 0.5f, 1.0f }
+};
+
 using namespace std;
 using namespace std::chrono;
 
 GameWorld::GameWorld(DeviceResources* device, XMFLOAT2 worldBounds)
 	:
-	worldBounds(worldBounds), cooldown(0), totalGameTime(0), removedBullets(0), removedEnemies(0), respawnTime(0.0f), respawnDelta(1.0f)
+	worldBounds(worldBounds), cooldown(0), totalGameTime(0), 
+	removedBullets(0), removedEnemies(0), respawnTime(0.0f), 
+	respawnDelta(1.0f), currentBulletType(BulletType::normal_bullet)
 { 
 	collisions.reserve(200);
 	camera = new Camera(device);
@@ -62,7 +89,7 @@ void GameWorld::GameLoop(Window* window, DeviceResources* device)
 
 
 	processUserInput(window, device, dt);
-	testCollisions(dt);
+	testCollisions(device, window, dt);
 	camera->UpdateCamera(*player, dt);
 	spawnEnemy(device, dt);
 }
@@ -137,6 +164,9 @@ void GameWorld::processUserInput(Window* window, DeviceResources* device, float 
 	if (window->IsKeyPressed('A')) x -= dx * dt;
 	if (window->IsKeyPressed('Q')) zoom -= dz * dt;
 	if (window->IsKeyPressed('E')) zoom += dz * dt;
+	if (window->IsKeyPressed('1')) currentBulletType = BulletType::normal_bullet;
+	if (window->IsKeyPressed('2')) currentBulletType = BulletType::spawner;
+
 
 	cooldown -= dt;
 	if (window->IsLeftPressed() && cooldown <= 0)
@@ -144,12 +174,13 @@ void GameWorld::processUserInput(Window* window, DeviceResources* device, float 
 		SpawnBullet(device, window, dt);
 	}
 
+
 	player->UpdateDisplacementVectors({x * dt, y * dt}, {0, 0}, 0);
 	camera->ZoomUpdate(zoom, 0.5f, 1.5f);
 
 }
 
-void GameWorld::testCollisions(float dt)
+void GameWorld::testCollisions(DeviceResources* device, Window* window, float dt)
 {
 	playerWallCollision(player, worldConstructions.data(), worldConstructions.size());
 	player->UpdatePosition();
@@ -167,7 +198,7 @@ void GameWorld::testCollisions(float dt)
 		XMVECTOR enemyCenterVec = XMLoadFloat2(&enemyCenter);
 
 		XMVECTOR dirVec = playerCenterVec - enemyCenterVec;
-		dirVec = XMVector2Normalize(dirVec) * dt;
+		dirVec = XMVector2Normalize(dirVec) * dt * velocityScalling[(int)currentBulletType];
 		XMFLOAT2 velocity;
 		XMStoreFloat2(&velocity, dirVec);
 
@@ -185,6 +216,12 @@ void GameWorld::testCollisions(float dt)
 		bulletLifetime[i] -= dt;
 		if (bulletLifetime[i] <= 0)
 		{
+
+			if (bullets[i]->GetBulletType() == BulletType::spawner)
+			{
+				BulletExplode(bullets[i], device, dt);
+			}
+
 			cleanBullet(i);
 			continue;
 		}
@@ -306,32 +343,30 @@ void GameWorld::bulletEnemyCollision(Bullet* bullet, Enemy** collidableTable, in
 		}
 	}
 
+	if (collisions.size() == 0)
+	{
+		return;
+	}
+
 	sort(collisions.begin(), collisions.end(),
 		[](pair<float, Entity*>& obj_1, pair<float, Entity*>& obj_2) {
 			return obj_1.first < obj_2.first;
 		});
 
 
-	for (pair<float, Entity*>& collision : collisions)
+	Enemy* collider = (Enemy * )collisions[0].second;
+		
+	auto enemytIterator = find(enemies.begin(), enemies.end(), collider);
+	int enemyIndex = distance(enemies.begin(), enemytIterator);
+	if (collider->DealDamage(bullet->GetDamage()))
 	{
-		CollisionDescriptor coll = bullet->IsCollidingWithEnemy((Enemy*)collision.second);
-		if (coll.collisionOccured)
-		{
-			auto enemytIterator = find(enemies.begin(), enemies.end(), coll.collider);
-			int enemyIndex = distance(enemies.begin(), enemytIterator);
-			if (((Enemy*)collision.second)->DealDamage(bullet->GetDamage()))
-			{
-				cleanEnemy(enemyIndex);
-			}
-
-			auto bulletIterator = find(bullets.begin(), bullets.end(), bullet);
-			int index = distance(bullets.begin(), bulletIterator);
-			cleanBullet(index);
-
-			return;
-		}
-
+		cleanEnemy(enemyIndex);
 	}
+
+	auto bulletIterator = find(bullets.begin(), bullets.end(), bullet);
+	int index = distance(bullets.begin(), bulletIterator);
+	cleanBullet(index);
+	
 }
 
 void GameWorld::cleanBullet(int i)
@@ -386,11 +421,50 @@ void GameWorld::SpawnBullet(DeviceResources* device, Window* window, float dt)
 	rayDirX /= normFactor;
 	rayDirY /= normFactor;
 
-	Bullet* bullet = new Bullet({ device, {playerCenter.x, playerCenter.y}, {0.01f, 0.01f} });
-	bullet->UpdateColor({ 0.9f, 0.4f, 0.36f, 1.0f });
-	bullet->UpdateDisplacementVectors({ rayDirX * dt, rayDirY * dt }, { 0,0 }, 0);
+	Bullet* bullet = new Bullet({ device, {playerCenter.x, playerCenter.y}, scaleTable[(int)currentBulletType], currentBulletType });
+	bullet->UpdateColor(colorTable[(int)currentBulletType] );
+	bullet->UpdateDisplacementVectors({ rayDirX * dt * velocityScalling[(int)currentBulletType], 
+										rayDirY * dt * velocityScalling[(int)currentBulletType] }, {0,0}, 0);
 	bullets.push_back(bullet);
 	RegisterResource(bullet);
-	bulletLifetime.push_back(BULLET_LIFETIME);
-	cooldown = COOLDOWN;
+	bulletLifetime.push_back(bulletLifetimeTable[(int)currentBulletType]);
+	cooldown = bulletCooldown[(int)currentBulletType] ;
+}
+
+void GameWorld::BulletExplode(Bullet* bullet, DeviceResources* device, float dt)
+{
+	
+	constexpr int spawnedBulletCount = 5;
+
+	PhysicalDescriptor bulletDesc = bullet->getEntityDescriptor();
+	XMFLOAT2 buff = { bulletDesc.width, 0 };
+	XMVECTOR offsetVec = XMLoadFloat2(&buff);
+
+
+	for (float angle = 0; angle < 2 * 3.141592; angle += (2 * 3.141592) / spawnedBulletCount)
+	{
+		offsetVec = XMVector2Transform(offsetVec, XMMatrixRotationZ(angle));
+		XMStoreFloat2(&buff, offsetVec);
+
+		if (abs(bulletDesc.center.x) + buff.x >= worldBounds.x
+			|| 
+			abs(bulletDesc.center.y) + buff.y >= worldBounds.y)
+		{
+			continue;
+		}
+
+		Bullet* bullet = new Bullet({ device, {bulletDesc.center.x + buff.x , bulletDesc.center.y + buff.y}, { 0.01f, 0.01f } });
+		bullet->UpdateColor({ 0.9f, 0.4f, 0.36f, 1.0f });
+		XMStoreFloat2(&buff,  XMVector2Normalize( offsetVec) );
+		bullet->UpdateDisplacementVectors({ buff.x * dt * velocityScalling[(int)BulletType::normal_bullet],
+											buff.y * dt * velocityScalling[(int)BulletType::normal_bullet] }, { 0,0 }, 0);
+		bullets.push_back(bullet);
+		RegisterResource(bullet);
+		bulletLifetime.push_back(bulletLifetimeTable[(int)BulletType::normal_bullet]);
+
+
+	}
+	
+
+
 }
