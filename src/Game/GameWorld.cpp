@@ -122,22 +122,22 @@ void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 		Enemy* enemy;
 		if (enemyType <=  WEAK_ENEMY)
 		{
-			enemy = new Enemy({ 1.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05} });
+			enemy = new Enemy({ 1.0f, device, {dis(gen), dis(gen)}, {0.035, 0.035}, EnemyType::weak });
 			enemy->UpdateColor({ 0.4f, 0.2f, 0.2f, 1.0f });
 		}
 		else if (enemyType <= (WEAK_ENEMY + MIDDLE_ENEMY))
 		{
-			enemy = new Enemy({ 2.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05} });
+			enemy = new Enemy({ 2.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05}, EnemyType::middle });
 			enemy->UpdateColor({ 0.6f, 0.2f, 0.2f, 1.0f });
 		}
 		else if (enemyType <= (WEAK_ENEMY + MIDDLE_ENEMY + STRONG_ENEMY))
 		{
-			enemy = new Enemy({ 3.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05} });
+			enemy = new Enemy({ 3.0f, device, {dis(gen), dis(gen)}, {0.06, 0.06}, EnemyType::strong });
 			enemy->UpdateColor({ 1.0f, 0.2f, 0.2f, 1.0f });
 		}
 		else
 		{
-			enemy = new Enemy({ 8.0f, device, {dis(gen), dis(gen)}, {0.05, 0.05} });
+			enemy = new Enemy({ 8.0f, device, {dis(gen), dis(gen)}, {0.08, 0.08}, EnemyType::super_strong });
 			enemy->UpdateColor({ 0.0f, 0.0f, 0.0f, 1.0f });
 		}
 
