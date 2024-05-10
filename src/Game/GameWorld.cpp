@@ -4,13 +4,14 @@
 #include "Bullet.h"
 #define DEAD_BULLET -100.0f
 #define BULLET_WIPE 50
+#define ENEMY_BULLET_WIPE 50
 #define ENEMY_WIPE 40
-#define RESPAWN_DELTA_MUL 0.7f
-#define RESPAWN_DELTA_CAP 0.05f
+#define RESPAWN_DELTA_MUL 0.8f
+#define RESPAWN_DELTA_CAP 0.1f
 #define WEAK_ENEMY 0.2f
 #define MIDDLE_ENEMY 0.6f
 #define STRONG_ENEMY 0.18f
-
+#define ENEMY_COOLDOWN 2.0f
 
 float bulletCooldown[] = {
 	0.01f,
@@ -22,11 +23,22 @@ float bulletLifetimeTable[] = {
 	2.0f
 };
 
+float enemyBulletLifetimeTable[] = {
+	3.0f,
+
+};
+
 float velocityScalling[] = {
 	1.0f,
 	0.6f
 };
 
+float enemyVelocityScalling[] = {
+	1.0f,
+	0.8f,
+	0.7f,
+	0.6f
+};
 
 static XMFLOAT2 scaleTable[] = {
 	{ 0.01f, 0.01f },
@@ -38,6 +50,11 @@ static XMFLOAT4 colorTable[] = {
 	{ 0.3f, 0.8f, 0.5f, 1.0f }
 };
 
+static XMFLOAT4 enemyColorTable[] = {
+	{ 0.8f, 0.8f, 0.8f, 1.0f },
+};
+
+
 using namespace std;
 using namespace std::chrono;
 
@@ -45,7 +62,8 @@ GameWorld::GameWorld(DeviceResources* device, XMFLOAT2 worldBounds)
 	:
 	worldBounds(worldBounds), cooldown(0), totalGameTime(0), 
 	removedBullets(0), removedEnemies(0), respawnTime(0.0f), 
-	respawnDelta(1.0f), currentBulletType(BulletType::normal_bullet)
+	respawnDelta(1.0f), currentBulletType(BulletType::normal_bullet),
+	removedEnemyBullets(0)
 { 
 	collisions.reserve(200);
 	camera = new Camera(device);
@@ -143,6 +161,7 @@ void GameWorld::spawnEnemy(DeviceResources* device, float dt)
 
 
 		enemies.push_back(enemy);
+		enemyCooldown.push_back(ENEMY_COOLDOWN);
 		RegisterResource(enemy);
 	}
 
@@ -185,54 +204,9 @@ void GameWorld::testCollisions(DeviceResources* device, Window* window, float dt
 	playerWallCollision(player, worldConstructions.data(), worldConstructions.size());
 	player->UpdatePosition();
 
-	XMFLOAT2 playerCenter = player->getEntityDescriptor().center;
-	XMVECTOR playerCenterVec = XMLoadFloat2(&playerCenter);
-	for (int i = 0; i < enemies.size(); i++)
-	{
-		Enemy* enemy = enemies[i];
-		if (enemy == nullptr)
-		{
-			continue;
-		}
-		XMFLOAT2 enemyCenter = enemy->getEntityDescriptor().center;
-		XMVECTOR enemyCenterVec = XMLoadFloat2(&enemyCenter);
-
-		XMVECTOR dirVec = playerCenterVec - enemyCenterVec;
-		dirVec = XMVector2Normalize(dirVec) * dt * velocityScalling[(int)currentBulletType];
-		XMFLOAT2 velocity;
-		XMStoreFloat2(&velocity, dirVec);
-
-		enemy->UpdateDisplacementVectors(velocity, {0,0}, 0);
-	}
-
-	for (int i = 0; i < bullets.size(); i++)
-	{
-
-		if (bulletLifetime[i] <= DEAD_BULLET)
-		{
-			continue;
-		}
-
-		bulletLifetime[i] -= dt;
-		if (bulletLifetime[i] <= 0)
-		{
-
-			if (bullets[i]->GetBulletType() == BulletType::spawner)
-			{
-				BulletExplode(bullets[i], device, dt);
-			}
-
-			cleanBullet(i);
-			continue;
-		}
-
-		bulletWallCollision(bullets[i], worldConstructions.data(), worldConstructions.size());
-		bulletEnemyCollision(bullets[i], enemies.data(), enemies.size());
-		if (bullets[i] != nullptr)
-		{
-			bullets[i]->UpdatePosition(true);
-		}
-	}
+	UpdateEnemies(device, dt);
+	UpdateFriendlyBullets(device, dt);
+	UpdateEnemyBullets(device, dt);
 
 	for (int i = 0; i < enemies.size(); i++)
 	{
@@ -243,6 +217,7 @@ void GameWorld::testCollisions(DeviceResources* device, Window* window, float dt
 		}
 		enemy->UpdatePosition();
 	}
+
 	if( removedBullets >= BULLET_WIPE)
 	{
 		auto newBulletEndIter = remove_if(bullets.begin(), bullets.end(), [](Bullet* bullet) { return bullet == nullptr; });
@@ -252,6 +227,19 @@ void GameWorld::testCollisions(DeviceResources* device, Window* window, float dt
 
 		removedBullets = 0;
 	}
+
+
+
+	if (removedEnemyBullets >= ENEMY_BULLET_WIPE)
+	{
+		auto newBulletEndIter = remove_if(enemyBullets.begin(), enemyBullets.end(), [](Bullet* bullet) { return bullet == nullptr; });
+		enemyBullets.erase(newBulletEndIter, enemyBullets.end());
+		auto newLifetimeEndIter = remove_if(enemyBulletsLifetime.begin(), enemyBulletsLifetime.end(), [](float& lifetime) { return lifetime == DEAD_BULLET; });
+		enemyBulletsLifetime.erase(newLifetimeEndIter, enemyBulletsLifetime.end());
+
+		removedBullets = 0;
+	}
+
 
 	if (removedEnemies >= ENEMY_WIPE)
 	{
@@ -388,6 +376,16 @@ void GameWorld::cleanEnemy(int i)
 	delete enemy;
 }
 
+void GameWorld::cleanEnemyBullet(int i)
+{
+	UnregisterResource(enemyBullets[i]);
+	Bullet* bullet = enemyBullets[i];
+	enemyBullets[i] = nullptr;
+	enemyBulletsLifetime[i] = DEAD_BULLET;
+	removedEnemyBullets++;
+	delete bullet;
+}
+
 void GameWorld::RegisterResource(Entity* entity)
 {
 
@@ -462,9 +460,111 @@ void GameWorld::BulletExplode(Bullet* bullet, DeviceResources* device, float dt)
 		RegisterResource(bullet);
 		bulletLifetime.push_back(bulletLifetimeTable[(int)BulletType::normal_bullet]);
 
-
 	}
 	
+}
 
+void GameWorld::UpdateFriendlyBullets(DeviceResources* device, float dt)
+{
+	for (int i = 0; i < bullets.size(); i++)
+	{
 
+		if (bulletLifetime[i] <= DEAD_BULLET)
+		{
+			continue;
+		}
+
+		bulletLifetime[i] -= dt;
+		if (bulletLifetime[i] <= 0)
+		{
+
+			if (bullets[i]->GetBulletType() == BulletType::spawner)
+			{
+				BulletExplode(bullets[i], device, dt);
+			}
+
+			cleanBullet(i);
+			continue;
+		}
+
+		bulletWallCollision(bullets[i], worldConstructions.data(), worldConstructions.size());
+		bulletEnemyCollision(bullets[i], enemies.data(), enemies.size());
+		if (bullets[i] != nullptr)
+		{
+			bullets[i]->UpdatePosition(true);
+		}
+	}
+}
+
+void GameWorld::UpdateEnemyBullets(DeviceResources* device, float dt)
+{
+	for (int i = 0; i < enemyBullets.size(); i++)
+	{
+
+		if (enemyBulletsLifetime[i] <= DEAD_BULLET)
+		{
+			continue;
+		}
+
+		enemyBulletsLifetime[i] -= dt;
+		if (enemyBulletsLifetime[i] <= 0)
+		{
+			cleanEnemyBullet(i);
+			continue;
+		}
+
+		bulletWallCollision(enemyBullets[i], worldConstructions.data(), worldConstructions.size());
+		CollisionDescriptor desc = enemyBullets[i]->IsColliding(player);
+
+		if (desc.collider)
+		{
+			exit(-1);
+		}
+
+		if (enemyBullets[i] != nullptr)
+		{
+			enemyBullets[i]->UpdatePosition(true);
+		}
+	}
+}
+
+void GameWorld::UpdateEnemies(DeviceResources* device, float dt)
+{
+	XMFLOAT2 playerCenter = player->getEntityDescriptor().center;
+	XMVECTOR playerCenterVec = XMLoadFloat2(&playerCenter);
+	for (int i = 0; i < enemies.size(); i++)
+	{
+		Enemy* enemy = enemies[i];
+		if (enemy == nullptr)
+		{
+			continue;
+		}
+
+		XMFLOAT2 velocity;
+		XMFLOAT2 enemyCenter = enemy->getEntityDescriptor().center;
+		XMVECTOR enemyCenterVec = XMLoadFloat2(&enemyCenter);
+
+		XMVECTOR dirVec = playerCenterVec - enemyCenterVec;
+		dirVec = XMVector2Normalize(dirVec) * dt;
+		enemyCooldown[i] -= dt;
+		if (enemyCooldown[i] <= 0)
+		{
+			enemyCooldown[i] = ENEMY_COOLDOWN;
+			XMStoreFloat2(&velocity, dirVec);
+
+			BulletType enemyBulletType = BulletType::normal_bullet;
+			Bullet* bullet = new Bullet({ device, {enemyCenter.x, enemyCenter.y}, scaleTable[(int)enemyBulletType], enemyBulletType });
+			bullet->UpdateColor(enemyColorTable[(int)enemyBulletType]);
+			bullet->UpdateDisplacementVectors({ velocity.x * velocityScalling[(int)enemyBulletType],
+												velocity.y * velocityScalling[(int)enemyBulletType] }, { 0,0 }, 0);
+			enemyBullets.push_back(bullet);
+			RegisterResource(bullet);
+			enemyBulletsLifetime.push_back(enemyBulletLifetimeTable[(int)enemyBulletType]);
+		}
+
+		dirVec = dirVec * enemyVelocityScalling[(int)enemies[i]->getType()] * 0.7f;
+		XMStoreFloat2(&velocity, dirVec);
+		enemy->UpdateDisplacementVectors(velocity, { 0,0 }, 0);
+
+	}
 }
